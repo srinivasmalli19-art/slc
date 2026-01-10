@@ -3,9 +3,9 @@ import { Outlet, NavLink } from 'react-router-dom';
 import { 
   Calculator, Percent, Download, Home
 } from 'lucide-react';
-import Header from './Header';
-import Disclaimer from './Disclaimer';
-import { cn } from '../../lib/utils';
+import Header from '@/components/layout/Header';
+import Disclaimer from '@/components/layout/Disclaimer';
+import { cn } from '@/lib/utils';
 
 const GuestLayout = () => {
   const menuItems = [

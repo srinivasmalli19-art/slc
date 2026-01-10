@@ -1,5 +1,5 @@
 import React from 'react';
-import { DISCLAIMER_TEXT } from '../../lib/utils';
+import { DISCLAIMER_TEXT } from '@/lib/utils';
 
 const Disclaimer = () => {
   return (

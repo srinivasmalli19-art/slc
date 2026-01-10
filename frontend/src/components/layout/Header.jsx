@@ -1,7 +1,7 @@
 import React from 'react';
 import { Bell, LogOut, User, Menu } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { Button } from '../ui/button';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+} from '@/components/ui/dropdown-menu';
 
 const Header = ({ onMenuClick, title }) => {
   const { user, logout } = useAuth();

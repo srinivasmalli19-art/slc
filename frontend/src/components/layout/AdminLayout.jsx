@@ -4,10 +4,10 @@ import {
   LayoutDashboard, Users, BookOpen, Settings, 
   Shield, BarChart3, X, ChevronRight
 } from 'lucide-react';
-import Header from './Header';
-import Disclaimer from './Disclaimer';
-import { cn } from '../../lib/utils';
-import { useAuth } from '../../context/AuthContext';
+import Header from '@/components/layout/Header';
+import Disclaimer from '@/components/layout/Disclaimer';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
