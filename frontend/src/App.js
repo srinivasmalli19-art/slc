@@ -15,6 +15,7 @@ import LoginPage from '@/components/pages/LoginPage';
 
 // Pages - Farmer
 import FarmerDashboard from '@/components/pages/farmer/FarmerDashboard';
+import FarmerProfile from '@/components/pages/farmer/FarmerProfile';
 import MyAnimals from '@/components/pages/farmer/MyAnimals';
 import AddAnimal from '@/components/pages/farmer/AddAnimal';
 import Vaccinations from '@/components/pages/farmer/Vaccinations';
@@ -25,6 +26,7 @@ import SickAnimals from '@/components/pages/farmer/SickAnimals';
 import AlertsReminders from '@/components/pages/farmer/AlertsReminders';
 import FarmerAreaCalculator from '@/components/pages/farmer/FarmerAreaCalculator';
 import FarmerInterestCalculator from '@/components/pages/farmer/FarmerInterestCalculator';
+import RationCalculator from '@/components/pages/farmer/RationCalculator';
 
 // Pages - Vet
 import VetDashboard from '@/components/pages/vet/VetDashboard';
@@ -113,7 +115,7 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route index element={<Navigate to="animals" replace />} />
-        <Route path="profile" element={<PlaceholderPage title="My Profile" description="View and edit your profile" />} />
+        <Route path="profile" element={<FarmerProfile />} />
         <Route path="animals" element={<MyAnimals />} />
         <Route path="animals/new" element={<AddAnimal />} />
         <Route path="animals/:id" element={<PlaceholderPage title="Animal Details" />} />
@@ -128,7 +130,7 @@ function AppRoutes() {
         <Route path="milk-records" element={<MilkRecords />} />
         
         {/* Calculators */}
-        <Route path="ration-calculator" element={<PlaceholderPage title="Ration Calculator" description="Calculate feed requirements for your animals" />} />
+        <Route path="ration-calculator" element={<RationCalculator />} />
         <Route path="area-calculator" element={<FarmerAreaCalculator />} />
         <Route path="interest-calculator" element={<FarmerInterestCalculator />} />
         
