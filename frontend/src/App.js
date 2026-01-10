@@ -10,19 +10,32 @@ import VetLayout from '@/components/layout/VetLayout';
 import AdminLayout from '@/components/layout/AdminLayout';
 import GuestLayout from '@/components/layout/GuestLayout';
 
-// Pages
+// Pages - Auth
 import LoginPage from '@/components/pages/LoginPage';
+
+// Pages - Farmer
 import FarmerDashboard from '@/components/pages/farmer/FarmerDashboard';
 import MyAnimals from '@/components/pages/farmer/MyAnimals';
 import AddAnimal from '@/components/pages/farmer/AddAnimal';
 import Vaccinations from '@/components/pages/farmer/Vaccinations';
 import Deworming from '@/components/pages/farmer/Deworming';
 import Breeding from '@/components/pages/farmer/Breeding';
+import MilkRecords from '@/components/pages/farmer/MilkRecords';
+import SickAnimals from '@/components/pages/farmer/SickAnimals';
+import AlertsReminders from '@/components/pages/farmer/AlertsReminders';
+import FarmerAreaCalculator from '@/components/pages/farmer/FarmerAreaCalculator';
+import FarmerInterestCalculator from '@/components/pages/farmer/FarmerInterestCalculator';
+
+// Pages - Vet
 import VetDashboard from '@/components/pages/vet/VetDashboard';
 import Diagnostics from '@/components/pages/vet/Diagnostics';
 import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
 import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
+
+// Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
+
+// Pages - Guest
 import AreaCalculator from '@/components/pages/guest/AreaCalculator';
 import InterestCalculator from '@/components/pages/guest/InterestCalculator';
 
@@ -43,7 +56,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect to appropriate dashboard based on role
     switch (user.role) {
       case 'farmer':
       case 'paravet':
@@ -62,12 +74,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-// Placeholder Components for routes not yet implemented
-const PlaceholderPage = ({ title }) => (
+// Placeholder Components
+const PlaceholderPage = ({ title, description }) => (
   <div className="flex items-center justify-center h-64">
     <div className="text-center">
       <h2 className="text-xl font-semibold text-slate-800">{title}</h2>
-      <p className="text-slate-500 mt-2">Coming soon...</p>
+      <p className="text-slate-500 mt-2">{description || 'Coming soon...'}</p>
     </div>
   </div>
 );
@@ -101,17 +113,45 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route index element={<Navigate to="animals" replace />} />
-        <Route path="profile" element={<PlaceholderPage title="My Profile" />} />
+        <Route path="profile" element={<PlaceholderPage title="My Profile" description="View and edit your profile" />} />
         <Route path="animals" element={<MyAnimals />} />
         <Route path="animals/new" element={<AddAnimal />} />
         <Route path="animals/:id" element={<PlaceholderPage title="Animal Details" />} />
+        
+        {/* Animal Health */}
         <Route path="vaccinations" element={<Vaccinations />} />
         <Route path="deworming" element={<Deworming />} />
+        <Route path="sick-animals" element={<SickAnimals />} />
+        
+        {/* Breeding & Milk */}
         <Route path="breeding" element={<Breeding />} />
-        <Route path="problems" element={<PlaceholderPage title="Observed Problems" />} />
-        <Route path="tips" element={<PlaceholderPage title="Tips & Advice" />} />
-        <Route path="ration" element={<PlaceholderPage title="Ration Calculator" />} />
-        <Route path="ayurvedic" element={<PlaceholderPage title="Ayurvedic Practice" />} />
+        <Route path="milk-records" element={<MilkRecords />} />
+        
+        {/* Calculators */}
+        <Route path="ration-calculator" element={<PlaceholderPage title="Ration Calculator" description="Calculate feed requirements for your animals" />} />
+        <Route path="area-calculator" element={<FarmerAreaCalculator />} />
+        <Route path="interest-calculator" element={<FarmerInterestCalculator />} />
+        
+        {/* Tips & Practices */}
+        <Route path="ayurvedic" element={<PlaceholderPage title="Ayurvedic Practices" description="Traditional remedies for common problems" />} />
+        <Route path="tips" element={<PlaceholderPage title="Animal Care Tips" description="Helpful tips for better animal care" />} />
+        
+        {/* Market */}
+        <Route path="animal-market" element={<PlaceholderPage title="Near By Animal Sales" description="Buy and sell animals in your area" />} />
+        
+        {/* Reports */}
+        <Route path="reports/vaccination" element={<PlaceholderPage title="Vaccination Report" />} />
+        <Route path="reports/deworming" element={<PlaceholderPage title="Deworming Report" />} />
+        <Route path="reports/breeding" element={<PlaceholderPage title="Breeding Report" />} />
+        <Route path="reports/ration" element={<PlaceholderPage title="Ration Report" />} />
+        <Route path="reports/area" element={<PlaceholderPage title="Area Measurement Report" />} />
+        <Route path="reports/financial" element={<PlaceholderPage title="Financial Report" />} />
+        
+        {/* Alerts & Reminders */}
+        <Route path="alerts/vaccination" element={<AlertsReminders type="vaccination" />} />
+        <Route path="alerts/deworming" element={<AlertsReminders type="deworming" />} />
+        <Route path="alerts/breeding" element={<AlertsReminders type="breeding" />} />
+        <Route path="alerts/followup" element={<AlertsReminders type="followup" />} />
       </Route>
 
       {/* Veterinarian Routes */}
