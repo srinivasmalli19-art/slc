@@ -34,7 +34,8 @@ export const speciesDisplayNames = {
   dog: 'Dog (Canine)',
   cat: 'Cat (Feline)',
   horse: 'Horse',
-  donkey: 'Donkey'
+  donkey: 'Donkey',
+  camel: 'Camel'
 };
 
 // Test categories display names
