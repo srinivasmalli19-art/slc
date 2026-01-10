@@ -3,10 +3,10 @@ import {
   Users, BookOpen, Shield, Settings, BarChart3, 
   TrendingUp, Activity, AlertTriangle, Loader2
 } from 'lucide-react';
-import { adminAPI } from '../../../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
+import { adminAPI } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -14,8 +14,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../ui/table';
-import { Switch } from '../../ui/switch';
+} from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 
 const AdminDashboard = () => {

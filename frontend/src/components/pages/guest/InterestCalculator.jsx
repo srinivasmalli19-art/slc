@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Percent, ArrowRight, RotateCcw, TrendingUp } from 'lucide-react';
-import { utilitiesAPI } from '../../../lib/api';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
+import { utilitiesAPI } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
 
 const InterestCalculator = () => {

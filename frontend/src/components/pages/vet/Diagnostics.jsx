@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Loader2, AlertTriangle, FileDown, Eye } from 'lucide-react';
-import { diagnosticsAPI, animalsAPI } from '../../../lib/api';
-import { formatDate, testCategoryDisplayNames, statusColors, speciesDisplayNames } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { diagnosticsAPI, animalsAPI } from '@/lib/api';
+import { formatDate, testCategoryDisplayNames, statusColors, speciesDisplayNames } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -15,13 +15,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../ui/table';
+} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '../../ui/dialog';
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 const Diagnostics = () => {

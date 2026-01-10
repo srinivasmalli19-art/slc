@@ -3,10 +3,10 @@ import {
   Activity, Stethoscope, ClipboardList, BookOpen, 
   AlertTriangle, TrendingUp, FileText, Users
 } from 'lucide-react';
-import { dashboardAPI } from '../../../lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
+import { dashboardAPI } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 

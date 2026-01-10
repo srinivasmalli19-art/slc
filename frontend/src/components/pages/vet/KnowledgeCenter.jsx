@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Loader2, BookOpen, ChevronRight, Filter } from 'lucide-react';
-import { knowledgeCenterAPI } from '../../../lib/api';
-import { testCategoryDisplayNames, speciesDisplayNames } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { knowledgeCenterAPI } from '@/lib/api';
+import { testCategoryDisplayNames, speciesDisplayNames } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '../../ui/accordion';
+} from '@/components/ui/accordion';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 const KnowledgeCenter = () => {
   const { isAdmin } = useAuth();

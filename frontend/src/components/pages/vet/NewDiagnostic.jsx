@@ -4,21 +4,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react';
-import { diagnosticsAPI, animalsAPI } from '../../../lib/api';
-import { speciesDisplayNames, testCategoryDisplayNames } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../ui/card';
-import { Textarea } from '../../ui/textarea';
+import { diagnosticsAPI, animalsAPI } from '@/lib/api';
+import { speciesDisplayNames, testCategoryDisplayNames } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
-import { Checkbox } from '../../ui/checkbox';
+} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 const diagnosticSchema = z.object({
