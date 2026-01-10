@@ -15,7 +15,7 @@ const speciesCategories = [
   { key: 'cattle_buffalo', label: 'Buffalo/Cattle', species: ['cattle', 'buffalo'] },
   { key: 'sheep_goat', label: 'Sheep/Goat', species: ['sheep', 'goat'] },
   { key: 'poultry', label: 'Poultry', species: ['poultry'] },
-  { key: 'others', label: 'Others', species: ['pig', 'dog', 'cat', 'horse'] },
+  { key: 'others', label: 'Others', species: ['pig', 'dog', 'cat', 'horse', 'donkey'] },
 ];
 
 const speciesImages = {
@@ -28,6 +28,7 @@ const speciesImages = {
   dog: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=100&q=80',
   cat: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=100&q=80',
   horse: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?auto=format&fit=crop&w=100&q=80',
+  donkey: 'https://images.unsplash.com/photo-1598974357801-cbca100e65d3?auto=format&fit=crop&w=100&q=80',
   default: 'https://images.unsplash.com/photo-1594466245134-136169b2d0a1?auto=format&fit=crop&w=100&q=80'
 };
 
