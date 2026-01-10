@@ -31,11 +31,9 @@ export const speciesDisplayNames = {
   goat: 'Goat',
   pig: 'Pig',
   poultry: 'Poultry',
-  dog: 'Dog',
-  cat: 'Cat',
-  horse: 'Horse',
-  camel: 'Camel',
-  donkey: 'Donkey'
+  dog: 'Dog (Canine)',
+  cat: 'Cat (Feline)',
+  horse: 'Horse'
 };
 
 // Test categories display names

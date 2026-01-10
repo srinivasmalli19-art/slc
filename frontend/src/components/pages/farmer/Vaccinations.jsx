@@ -30,6 +30,7 @@ const speciesCategories = [
   { key: 'cattle_buffalo', label: 'Buffalo/Cattle', species: ['cattle', 'buffalo'] },
   { key: 'sheep_goat', label: 'Sheep/Goat', species: ['sheep', 'goat'] },
   { key: 'poultry', label: 'Poultry', species: ['poultry'] },
+  { key: 'others', label: 'Others', species: ['pig', 'dog', 'cat', 'horse'] },
 ];
 
 const Vaccinations = () => {

@@ -30,7 +30,7 @@ const speciesCategories = [
   { key: 'all', label: 'All' },
   { key: 'cattle_buffalo', label: 'Buffalo/Cattle', species: ['cattle', 'buffalo'] },
   { key: 'sheep_goat', label: 'Sheep/Goat', species: ['sheep', 'goat'] },
-  { key: 'others', label: 'Others', species: ['pig', 'horse', 'donkey', 'camel'] },
+  { key: 'others', label: 'Others', species: ['pig', 'horse', 'dog', 'cat'] },
 ];
 
 const breedingTypes = [

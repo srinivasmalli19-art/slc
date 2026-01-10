@@ -61,8 +61,6 @@ class Species(str, Enum):
     DOG = "dog"
     CAT = "cat"
     HORSE = "horse"
-    CAMEL = "camel"
-    DONKEY = "donkey"
 
 class TestCategory(str, Enum):
     BLOOD = "blood"
