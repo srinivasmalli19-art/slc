@@ -1,28 +1,28 @@
 import React from 'react';
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from './components/ui/sonner';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { Toaster } from '@/components/ui/sonner';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 // Layouts
-import FarmerLayout from './components/layout/FarmerLayout';
-import VetLayout from './components/layout/VetLayout';
-import AdminLayout from './components/layout/AdminLayout';
-import GuestLayout from './components/layout/GuestLayout';
+import FarmerLayout from '@/components/layout/FarmerLayout';
+import VetLayout from '@/components/layout/VetLayout';
+import AdminLayout from '@/components/layout/AdminLayout';
+import GuestLayout from '@/components/layout/GuestLayout';
 
 // Pages
-import LoginPage from './components/pages/LoginPage';
-import FarmerDashboard from './components/pages/farmer/FarmerDashboard';
-import MyAnimals from './components/pages/farmer/MyAnimals';
-import AddAnimal from './components/pages/farmer/AddAnimal';
-import Vaccinations from './components/pages/farmer/Vaccinations';
-import VetDashboard from './components/pages/vet/VetDashboard';
-import Diagnostics from './components/pages/vet/Diagnostics';
-import NewDiagnostic from './components/pages/vet/NewDiagnostic';
-import KnowledgeCenter from './components/pages/vet/KnowledgeCenter';
-import AdminDashboard from './components/pages/admin/AdminDashboard';
-import AreaCalculator from './components/pages/guest/AreaCalculator';
-import InterestCalculator from './components/pages/guest/InterestCalculator';
+import LoginPage from '@/components/pages/LoginPage';
+import FarmerDashboard from '@/components/pages/farmer/FarmerDashboard';
+import MyAnimals from '@/components/pages/farmer/MyAnimals';
+import AddAnimal from '@/components/pages/farmer/AddAnimal';
+import Vaccinations from '@/components/pages/farmer/Vaccinations';
+import VetDashboard from '@/components/pages/vet/VetDashboard';
+import Diagnostics from '@/components/pages/vet/Diagnostics';
+import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
+import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
+import AdminDashboard from '@/components/pages/admin/AdminDashboard';
+import AreaCalculator from '@/components/pages/guest/AreaCalculator';
+import InterestCalculator from '@/components/pages/guest/InterestCalculator';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
