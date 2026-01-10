@@ -1,34 +1,136 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* SLC Application Styles */
+
+/* Logo animation */
+.slc-logo {
+    transition: transform 0.3s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+.slc-logo:hover {
+    transform: scale(1.05);
+}
+
+/* Grid patterns for dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1.5rem;
     }
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Role-specific styling */
+.farmer-theme {
+    --accent-bg: #f0fdf4;
+    --accent-border: #86efac;
 }
 
-.App-link {
-    color: #61dafb;
+.vet-theme {
+    --accent-bg: #f8fafc;
+    --accent-border: #e2e8f0;
 }
 
-@keyframes App-logo-spin {
+/* Navigation active state */
+.nav-item-active {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-left: 3px solid white;
+}
+
+/* Table styles for vet dashboard */
+.vet-table {
+    @apply w-full text-sm;
+}
+
+.vet-table th {
+    @apply bg-slate-50 text-left p-3 font-semibold text-slate-700 border-b;
+}
+
+.vet-table td {
+    @apply p-3 border-b border-slate-100;
+}
+
+.vet-table tr:hover {
+    @apply bg-slate-50;
+}
+
+/* Form wizard steps */
+.step-indicator {
+    @apply flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium;
+}
+
+.step-indicator.active {
+    @apply bg-primary text-white;
+}
+
+.step-indicator.completed {
+    @apply bg-green-500 text-white;
+}
+
+.step-indicator.pending {
+    @apply bg-slate-200 text-slate-500;
+}
+
+/* Toast animations */
+.toast-enter {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
     from {
-        transform: rotate(0deg);
+        transform: translateX(100%);
+        opacity: 0;
     }
     to {
-        transform: rotate(360deg);
+        transform: translateX(0);
+        opacity: 1;
     }
+}
+
+/* Loading spinner */
+.spinner {
+    @apply animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full;
+}
+
+/* Card hover effects */
+.card-hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* Print styles for PDF */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .print-only {
+        display: block !important;
+    }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
