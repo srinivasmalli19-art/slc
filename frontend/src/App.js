@@ -16,6 +16,8 @@ import FarmerDashboard from '@/components/pages/farmer/FarmerDashboard';
 import MyAnimals from '@/components/pages/farmer/MyAnimals';
 import AddAnimal from '@/components/pages/farmer/AddAnimal';
 import Vaccinations from '@/components/pages/farmer/Vaccinations';
+import Deworming from '@/components/pages/farmer/Deworming';
+import Breeding from '@/components/pages/farmer/Breeding';
 import VetDashboard from '@/components/pages/vet/VetDashboard';
 import Diagnostics from '@/components/pages/vet/Diagnostics';
 import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
@@ -104,8 +106,8 @@ function AppRoutes() {
         <Route path="animals/new" element={<AddAnimal />} />
         <Route path="animals/:id" element={<PlaceholderPage title="Animal Details" />} />
         <Route path="vaccinations" element={<Vaccinations />} />
-        <Route path="deworming" element={<PlaceholderPage title="Deworming Records" />} />
-        <Route path="breeding" element={<PlaceholderPage title="Breeding Records" />} />
+        <Route path="deworming" element={<Deworming />} />
+        <Route path="breeding" element={<Breeding />} />
         <Route path="problems" element={<PlaceholderPage title="Observed Problems" />} />
         <Route path="tips" element={<PlaceholderPage title="Tips & Advice" />} />
         <Route path="ration" element={<PlaceholderPage title="Ration Calculator" />} />
