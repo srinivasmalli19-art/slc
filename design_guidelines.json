@@ -1,0 +1,144 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Smart Livestock Care (SLC)",
+      "tone": "Professional, Authoritative, Approachable, Trustworthy",
+      "keywords": ["Government-Grade", "Clinical Precision", "Farmer-Friendly", "Secure"],
+      "visual_metaphor": "The Digital Veterinary Clinic & Farm Journal"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Manrope, sans-serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-5xl font-bold tracking-tight",
+        "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+        "h3": "text-2xl font-semibold",
+        "h4": "text-xl font-medium",
+        "body_lg": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground",
+        "tiny": "text-xs font-medium uppercase tracking-wider"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#15803d",
+          "foreground": "#ffffff",
+          "50": "#f0fdf4",
+          "100": "#dcfce7",
+          "200": "#bbf7d0",
+          "300": "#86efac",
+          "400": "#4ade80",
+          "500": "#22c55e",
+          "600": "#16a34a",
+          "700": "#15803d",
+          "800": "#166534",
+          "900": "#14532d"
+        },
+        "secondary": {
+          "DEFAULT": "#f59e0b",
+          "foreground": "#0f172a",
+          "50": "#fffbeb",
+          "100": "#fef3c7",
+          "500": "#f59e0b",
+          "700": "#b45309"
+        },
+        "accent": {
+          "DEFAULT": "#0ea5e9",
+          "foreground": "#ffffff"
+        },
+        "destructive": {
+          "DEFAULT": "#ef4444",
+          "foreground": "#ffffff"
+        },
+        "background": "#ffffff",
+        "foreground": "#020617",
+        "muted": "#f1f5f9",
+        "border": "#e2e8f0"
+      },
+      "usage": {
+        "farmer_dashboard": "Use Primary Green + Earthy Secondary (Amber/Brown) for warmth.",
+        "vet_dashboard": "Use Clinical White/Gray + Primary Green accents + Blue for information.",
+        "alerts": "Red for Zoonotic/High-Risk, Amber for Attention, Blue for Info."
+      }
+    },
+    "layout": {
+      "spacing": {
+        "container_padding": "p-4 md:p-8 lg:p-12",
+        "section_gap": "gap-8 md:gap-12",
+        "card_padding": "p-6"
+      },
+      "grids": {
+        "dashboard_macro": "grid grid-cols-1 md:grid-cols-12 gap-6",
+        "card_grid": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6",
+        "form_layout": "max-w-2xl mx-auto space-y-6"
+      },
+      "radius": {
+        "default": "rounded-lg",
+        "button": "rounded-md",
+        "card": "rounded-xl"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+        "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        "outline": "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        "ghost": "hover:bg-accent hover:text-accent-foreground"
+      },
+      "cards": {
+        "base": "bg-card text-card-foreground rounded-xl border shadow-sm",
+        "interactive": "hover:shadow-md transition-shadow cursor-pointer",
+        "farmer_feature": "bg-green-50/50 border-green-100 hover:border-green-300 transition-all"
+      },
+      "inputs": {
+        "default": "h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      }
+    },
+    "visual_assets": {
+      "images": {
+        "hero_farmer": "https://images.unsplash.com/photo-1543591777-da7228e6d10c?auto=format&fit=crop&q=80",
+        "hero_vet": "https://images.unsplash.com/photo-1631651361952-4505762bedcc?auto=format&fit=crop&q=80",
+        "livestock_cattle": "https://images.unsplash.com/photo-1594466245134-136169b2d0a1?auto=format&fit=crop&q=80",
+        "livestock_sheep": "https://images.unsplash.com/photo-1690543581035-2cf08f993434?auto=format&fit=crop&q=80",
+        "livestock_poultry": "https://images.unsplash.com/photo-1658086130176-9e771ed4c9b1?auto=format&fit=crop&q=80",
+        "login_bg": "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?auto=format&fit=crop&q=80"
+      },
+      "icons": {
+        "library": "lucide-react",
+        "style": "Stroke width 1.5px for elegance, 2px for active states"
+      }
+    },
+    "accessibility": {
+      "contrast": "Ensure WCAG AA compliance (4.5:1) for all text.",
+      "focus_states": "Visible ring-2 ring-offset-2 ring-primary on all interactive elements.",
+      "touch_targets": "Minimum 44x44px for mobile interactions (Farmer App)."
+    },
+    "motion": {
+      "transitions": "transition-all duration-200 ease-in-out",
+      "hover_lift": "hover:-translate-y-1 hover:shadow-lg",
+      "page_enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    },
+    "instructions_to_main_agent": [
+      "1. IMPLEMENT ROLE-BASED ROUTING: Create distinct layouts for /farmer, /vet, /admin, /guest.",
+      "2. FARMER UI: Use large cards, icons, and simple language. Avoid complex tables. Use the 'hero_farmer' image for the dashboard header.",
+      "3. VET UI: Use dense data tables (Shadcn Table), sidebars, and clinical terminology. Use 'hero_vet' for the login/welcome.",
+      "4. FORMS: Use 'react-hook-form' with 'zod' validation. Break long forms (Animal Registration) into Steps (Wizard pattern).",
+      "5. ALERTS: Implement a 'SafetyAlert' component for Zoonotic diseases using the 'destructive' color palette.",
+      "6. DISCLAIMER: Every page MUST have a sticky or prominent footer disclaimer: 'This system provides clinical reference and decision support only. Final diagnosis and treatment decisions must be made by a registered veterinarian.'",
+      "7. PWA: Ensure meta tags for PWA are present (viewport, theme-color).",
+      "8. DATA-TESTID: Add 'data-testid' to all buttons, inputs, and cards."
+    ],
+    "universal_guidelines": [
+      "Do not use gradients for backgrounds, use solid colors or subtle patterns.",
+      "Use 'sonner' for toast notifications.",
+      "Use 'lucide-react' for icons.",
+      "Ensure all images have alt text.",
+      "Follow the 'Fusion over Imitation' principle: Mix Government Authority with Agritech Warmth."
+    ]
+  }
+}
