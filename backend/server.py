@@ -358,7 +358,8 @@ async def register_user(user: UserCreate):
     await db.users.insert_one(user_dict)
     
     del user_dict["password"]
-    del user_dict["_id"] if "_id" in user_dict else None
+    if "_id" in user_dict:
+        del user_dict["_id"]
     return UserResponse(**user_dict)
 
 @api_router.post("/auth/login", response_model=TokenResponse)
@@ -401,7 +402,8 @@ async def create_animal(animal: AnimalCreate, user: dict = Depends(require_role(
     animal_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.animals.insert_one(animal_dict)
-    del animal_dict["_id"] if "_id" in animal_dict else None
+    if "_id" in animal_dict:
+        del animal_dict["_id"]
     return AnimalResponse(**animal_dict)
 
 @api_router.get("/animals", response_model=List[AnimalResponse])
@@ -457,7 +459,8 @@ async def create_vaccination(vaccination: VaccinationCreate, user: dict = Depend
     vacc_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.vaccinations.insert_one(vacc_dict)
-    del vacc_dict["_id"] if "_id" in vacc_dict else None
+    if "_id" in vacc_dict:
+        del vacc_dict["_id"]
     return VaccinationResponse(**vacc_dict)
 
 @api_router.get("/vaccinations", response_model=List[VaccinationResponse])
@@ -482,7 +485,8 @@ async def create_deworming(deworming: DewormingCreate, user: dict = Depends(requ
     dew_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.deworming.insert_one(dew_dict)
-    del dew_dict["_id"] if "_id" in dew_dict else None
+    if "_id" in dew_dict:
+        del dew_dict["_id"]
     return DewormingResponse(**dew_dict)
 
 @api_router.get("/deworming", response_model=List[DewormingResponse])
@@ -507,7 +511,8 @@ async def create_breeding(breeding: BreedingCreate, user: dict = Depends(require
     breed_dict["created_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.breeding.insert_one(breed_dict)
-    del breed_dict["_id"] if "_id" in breed_dict else None
+    if "_id" in breed_dict:
+        del breed_dict["_id"]
     return BreedingResponse(**breed_dict)
 
 @api_router.get("/breeding", response_model=List[BreedingResponse])
@@ -542,7 +547,8 @@ async def create_diagnostic(diagnostic: DiagnosticTestCreate, user: dict = Depen
     diag_dict["interpretation"] = interpretation
     
     await db.diagnostics.insert_one(diag_dict)
-    del diag_dict["_id"] if "_id" in diag_dict else None
+    if "_id" in diag_dict:
+        del diag_dict["_id"]
     return DiagnosticTestResponse(**diag_dict)
 
 @api_router.get("/diagnostics", response_model=List[DiagnosticTestResponse])
@@ -646,7 +652,8 @@ async def create_knowledge_entry(entry: KnowledgeCenterEntry, user: dict = Depen
     entry_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.knowledge_center.insert_one(entry_dict)
-    del entry_dict["_id"] if "_id" in entry_dict else None
+    if "_id" in entry_dict:
+        del entry_dict["_id"]
     return KnowledgeCenterResponse(**entry_dict)
 
 @api_router.put("/knowledge-center/{entry_id}", response_model=KnowledgeCenterResponse)
