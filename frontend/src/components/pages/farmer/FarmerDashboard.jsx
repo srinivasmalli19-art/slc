@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  User, PawPrint, Syringe, Bug, Heart, AlertCircle, 
-  Lightbulb, Calculator, Leaf, ShoppingBag, Plus
+  User, PawPrint, Stethoscope, Heart, Milk, Calculator, 
+  Leaf, Lightbulb, ShoppingCart, Ruler, Percent, FileText,
+  Bell, Plus, ChevronRight
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { dashboardAPI } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 const FarmerDashboard = () => {
@@ -37,7 +39,7 @@ const FarmerDashboard = () => {
       label: 'My Profile', 
       path: '/farmer/profile',
       color: 'bg-blue-100 text-blue-600',
-      image: 'https://images.unsplash.com/photo-1543591777-da7228e6d10c?auto=format&fit=crop&w=200&q=80'
+      description: 'View & edit your details'
     },
     { 
       icon: PawPrint, 
@@ -45,23 +47,15 @@ const FarmerDashboard = () => {
       path: '/farmer/animals',
       color: 'bg-green-100 text-green-600',
       count: stats?.total_animals,
-      image: 'https://images.unsplash.com/photo-1594466245134-136169b2d0a1?auto=format&fit=crop&w=200&q=80'
+      description: 'Manage your livestock'
     },
     { 
-      icon: Syringe, 
-      label: 'Vaccinations', 
+      icon: Stethoscope, 
+      label: 'Animal Health', 
       path: '/farmer/vaccinations',
       color: 'bg-purple-100 text-purple-600',
       count: stats?.total_vaccinations,
-      image: null
-    },
-    { 
-      icon: Bug, 
-      label: 'Deworming', 
-      path: '/farmer/deworming',
-      color: 'bg-orange-100 text-orange-600',
-      count: stats?.total_deworming,
-      image: null
+      description: 'Vaccinations & Deworming'
     },
     { 
       icon: Heart, 
@@ -69,40 +63,103 @@ const FarmerDashboard = () => {
       path: '/farmer/breeding',
       color: 'bg-pink-100 text-pink-600',
       count: stats?.total_breeding,
-      image: null
+      description: 'AI & Natural breeding'
     },
     { 
-      icon: AlertCircle, 
-      label: 'Observed Problems', 
-      path: '/farmer/problems',
-      color: 'bg-red-100 text-red-600',
-      image: null
-    },
-    { 
-      icon: Lightbulb, 
-      label: 'Tips', 
-      path: '/farmer/tips',
-      color: 'bg-yellow-100 text-yellow-600',
-      image: null
+      icon: Milk, 
+      label: 'Milk Records', 
+      path: '/farmer/milk-records',
+      color: 'bg-sky-100 text-sky-600',
+      description: 'Track daily milk yield'
     },
     { 
       icon: Calculator, 
       label: 'Ration Calculator', 
-      path: '/farmer/ration',
+      path: '/farmer/ration-calculator',
       color: 'bg-amber-100 text-amber-600',
-      image: null
+      description: 'Feed planning'
     },
     { 
       icon: Leaf, 
-      label: 'Ayurvedic Practice', 
+      label: 'Ayurvedic Practices', 
       path: '/farmer/ayurvedic',
       color: 'bg-emerald-100 text-emerald-600',
-      image: null
+      description: 'Traditional remedies'
+    },
+    { 
+      icon: Lightbulb, 
+      label: 'Animal Care Tips', 
+      path: '/farmer/tips',
+      color: 'bg-yellow-100 text-yellow-600',
+      description: 'Helpful advice'
+    },
+    { 
+      icon: ShoppingCart, 
+      label: 'Near By Animal Sales', 
+      path: '/farmer/animal-market',
+      color: 'bg-orange-100 text-orange-600',
+      description: 'Buy & sell animals'
+    },
+    { 
+      icon: Ruler, 
+      label: 'Area Measurement', 
+      path: '/farmer/area-calculator',
+      color: 'bg-indigo-100 text-indigo-600',
+      description: 'Calculate land area'
+    },
+    { 
+      icon: Percent, 
+      label: 'Interest Calculator', 
+      path: '/farmer/interest-calculator',
+      color: 'bg-rose-100 text-rose-600',
+      description: 'Loan calculations'
+    },
+    { 
+      icon: FileText, 
+      label: 'Reports', 
+      path: '/farmer/reports/vaccination',
+      color: 'bg-slate-100 text-slate-600',
+      description: 'View all reports'
+    },
+    { 
+      icon: Bell, 
+      label: 'Alerts & Reminders', 
+      path: '/farmer/alerts/vaccination',
+      color: 'bg-red-100 text-red-600',
+      description: 'Due dates & reminders'
     },
   ];
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-green-700">{stats?.total_animals || 0}</p>
+            <p className="text-sm text-green-600">Total Animals</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-purple-700">{stats?.total_vaccinations || 0}</p>
+            <p className="text-sm text-purple-600">Vaccinations</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-orange-50 border-orange-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-orange-700">{stats?.total_deworming || 0}</p>
+            <p className="text-sm text-orange-600">Deworming</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-pink-50 border-pink-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-pink-700">{stats?.total_breeding || 0}</p>
+            <p className="text-sm text-pink-600">Breeding</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Action */}
       <div className="flex justify-end">
         <Button 
@@ -111,63 +168,43 @@ const FarmerDashboard = () => {
           data-testid="add-animal-btn"
         >
           <Plus className="h-4 w-4" />
-          Add Animal
+          Add New Animal
         </Button>
       </div>
 
       {/* Menu Grid */}
-      <div className="dashboard-grid">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {menuItems.map((item, index) => (
           <Card
             key={item.path}
-            className="slc-card-farmer cursor-pointer group"
+            className="slc-card-farmer cursor-pointer group hover:shadow-lg"
             onClick={() => navigate(item.path)}
             data-testid={`menu-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             style={{ animationDelay: `${index * 50}ms` }}
           >
             <CardContent className="p-4 flex flex-col items-center text-center">
-              {item.image ? (
-                <div className="w-16 h-16 rounded-lg overflow-hidden mb-3 border-2 border-green-100 group-hover:border-green-300 transition-colors">
-                  <img 
-                    src={item.image} 
-                    alt={item.label}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ) : (
-                <div className={`w-14 h-14 rounded-lg flex items-center justify-center mb-3 ${item.color} group-hover:scale-110 transition-transform`}>
-                  <item.icon className="h-7 w-7" />
-                </div>
-              )}
-              <h3 className="font-medium text-slate-800 text-sm">{item.label}</h3>
-              {item.count !== undefined && (
-                <span className="text-xs text-primary font-semibold mt-1">
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-3 ${item.color} group-hover:scale-110 transition-transform`}>
+                <item.icon className="h-7 w-7" />
+              </div>
+              <h3 className="font-semibold text-slate-800 text-sm">{item.label}</h3>
+              <p className="text-xs text-slate-500 mt-1">{item.description}</p>
+              {item.count !== undefined && item.count > 0 && (
+                <Badge className="mt-2 bg-primary/10 text-primary">
                   {item.count} records
-                </span>
+                </Badge>
               )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Animal Market Button */}
-      <Card 
-        className="slc-card-farmer cursor-pointer"
-        onClick={() => toast.info('Animal Market feature coming soon!')}
-        data-testid="animal-market-card"
-      >
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-green-100">
-            <img 
-              src="https://images.unsplash.com/photo-1594466245134-136169b2d0a1?auto=format&fit=crop&w=200&q=80" 
-              alt="Animal Market"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div>
-            <h3 className="font-semibold text-slate-800">Animal Market</h3>
-            <p className="text-sm text-slate-500">Buy and sell livestock</p>
-          </div>
+      {/* Info Banner */}
+      <Card className="bg-green-50 border-green-200">
+        <CardContent className="p-4">
+          <p className="text-sm text-green-800 text-center">
+            <strong>Tip:</strong> Keep your animal records updated regularly for better health management.
+            All information shown is for reference only.
+          </p>
         </CardContent>
       </Card>
     </div>
