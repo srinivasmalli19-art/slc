@@ -4,10 +4,10 @@ import {
   User, PawPrint, Syringe, Bug, Heart, AlertCircle, 
   Lightbulb, Calculator, Leaf, ShoppingBag, Plus
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { dashboardAPI } from '../../lib/api';
-import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
+import { useAuth } from '@/context/AuthContext';
+import { dashboardAPI } from '@/lib/api';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const FarmerDashboard = () => {

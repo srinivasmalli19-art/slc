@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, ChevronRight, Loader2 } from 'lucide-react';
-import { animalsAPI } from '../../../lib/api';
-import { speciesDisplayNames, formatDate } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Card, CardContent } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { animalsAPI } from '@/lib/api';
+import { speciesDisplayNames, formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 
 const speciesCategories = [

@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronRight, Loader2, Syringe, Calendar } from 'lucide-react';
-import { vaccinationsAPI, animalsAPI } from '../../../lib/api';
-import { formatDate } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Badge } from '../../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { vaccinationsAPI, animalsAPI } from '@/lib/api';
+import { formatDate } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '../../ui/dialog';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const speciesCategories = [

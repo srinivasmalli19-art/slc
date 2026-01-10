@@ -4,20 +4,20 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Loader2, Check } from 'lucide-react';
-import { animalsAPI } from '../../../lib/api';
-import { speciesDisplayNames } from '../../../lib/utils';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Textarea } from '../../ui/textarea';
+import { animalsAPI } from '@/lib/api';
+import { speciesDisplayNames } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../ui/select';
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const animalSchema = z.object({
