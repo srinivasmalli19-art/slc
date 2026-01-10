@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Loader2, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Check } from 'lucide-react';
 import { animalsAPI } from '@/lib/api';
 import { speciesDisplayNames } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -20,22 +21,84 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// Species-specific breeds
+const breedsBySpecies = {
+  cattle: ['Holstein Friesian', 'Jersey', 'Sahiwal', 'Gir', 'Red Sindhi', 'Tharparkar', 'Ongole', 'Kankrej', 'Hariana', 'Crossbred', 'Other'],
+  buffalo: ['Murrah', 'Surti', 'Jaffarabadi', 'Mehsana', 'Nagpuri', 'Nili-Ravi', 'Bhadawari', 'Toda', 'Other'],
+  sheep: ['Deccani', 'Nellore', 'Marwari', 'Chokla', 'Magra', 'Sonadi', 'Patanwadi', 'Mandya', 'Other'],
+  goat: ['Jamunapari', 'Beetal', 'Barbari', 'Sirohi', 'Osmanabadi', 'Black Bengal', 'Marwari', 'Mehsana', 'Other'],
+  pig: ['Large White Yorkshire', 'Landrace', 'Hampshire', 'Duroc', 'Desi', 'Crossbred', 'Other'],
+  poultry: ['Desi/Country', 'Broiler', 'Layer', 'Kadaknath', 'Aseel', 'Rhode Island Red', 'White Leghorn', 'Other'],
+  dog: ['Desi/Indian', 'German Shepherd', 'Labrador', 'Golden Retriever', 'Rottweiler', 'Doberman', 'Pomeranian', 'Other'],
+  cat: ['Desi/Indian', 'Persian', 'Siamese', 'Maine Coon', 'Other'],
+  horse: ['Marwari', 'Kathiawari', 'Thoroughbred', 'Arabian', 'Other'],
+  donkey: ['Indian Donkey', 'Other'],
+  camel: ['Bikaneri', 'Jaisalmeri', 'Kachchhi', 'Mewari', 'Other'],
+};
+
+// Status options based on species and age
+const getStatusOptions = (species, ageMonths) => {
+  const age = parseInt(ageMonths) || 0;
+  
+  // For poultry
+  if (species === 'poultry') {
+    return [
+      { value: 'chick', label: 'Chick' },
+      { value: 'grower', label: 'Grower' },
+      { value: 'layer', label: 'Layer' },
+      { value: 'broiler', label: 'Broiler' },
+    ];
+  }
+  
+  // For pets
+  if (['dog', 'cat'].includes(species)) {
+    return [
+      { value: 'puppy_kitten', label: age < 12 ? 'Puppy/Kitten' : 'Young' },
+      { value: 'adult', label: 'Adult' },
+      { value: 'senior', label: 'Senior' },
+    ];
+  }
+  
+  // For livestock (cattle, buffalo, sheep, goat, pig)
+  const options = [];
+  
+  // Calf only if age <= 36 months (3 years)
+  if (age <= 36) {
+    options.push({ value: 'calf', label: 'Calf / Young' });
+  }
+  
+  options.push({ value: 'heifer', label: 'Heifer / Growing' });
+  options.push({ value: 'pregnant', label: 'Pregnant' });
+  
+  if (['cattle', 'buffalo', 'goat', 'sheep'].includes(species)) {
+    options.push({ value: 'milking', label: 'Milking' });
+    options.push({ value: 'dry', label: 'Dry' });
+  }
+  
+  options.push({ value: 'breeding', label: 'For Breeding' });
+  
+  return options;
+};
+
 const animalSchema = z.object({
-  tag_id: z.string().min(1, 'Tag ID is required'),
+  tag_id: z.string().min(1, 'Tag number is required'),
   species: z.string().min(1, 'Species is required'),
   breed: z.string().min(1, 'Breed is required'),
   age_months: z.coerce.number().min(0, 'Age must be positive'),
-  gender: z.string().min(1, 'Gender is required'),
-  status: z.string().optional(),
+  gender: z.string().min(1, 'Sex is required'),
+  status: z.string().min(1, 'Status is required'),
   color: z.string().optional(),
   weight_kg: z.coerce.number().optional(),
+  identification_marks: z.string().optional(),
+  origin: z.string().optional(),
   notes: z.string().optional(),
 });
 
-const AddAnimal = () => {
+const AddAnimalEnhanced = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const totalSteps = 3;
 
   const form = useForm({
     resolver: zodResolver(animalSchema),
@@ -48,9 +111,15 @@ const AddAnimal = () => {
       status: 'healthy',
       color: '',
       weight_kg: '',
+      identification_marks: '',
+      origin: 'born',
       notes: '',
     },
   });
+
+  const watchSpecies = form.watch('species');
+  const watchAge = form.watch('age_months');
+  const watchGender = form.watch('gender');
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -69,18 +138,22 @@ const AddAnimal = () => {
     }
   };
 
+  const nextStep = async () => {
+    let fieldsToValidate = [];
+    if (step === 1) fieldsToValidate = ['species', 'breed', 'tag_id'];
+    if (step === 2) fieldsToValidate = ['age_months', 'gender', 'status'];
+    
+    const isValid = await form.trigger(fieldsToValidate);
+    if (isValid) setStep(step + 1);
+  };
+
+  const prevStep = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
   const speciesOptions = Object.entries(speciesDisplayNames);
-  const genderOptions = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-  ];
-  const statusOptions = [
-    { value: 'healthy', label: 'Healthy' },
-    { value: 'sick', label: 'Sick' },
-    { value: 'pregnant', label: 'Pregnant' },
-    { value: 'milking', label: 'Milking' },
-    { value: 'dry', label: 'Dry' },
-  ];
+  const breedOptions = watchSpecies ? breedsBySpecies[watchSpecies] || [] : [];
+  const statusOptions = getStatusOptions(watchSpecies, watchAge);
 
   return (
     <div className="max-w-2xl mx-auto animate-fade-in">
@@ -89,223 +162,286 @@ const AddAnimal = () => {
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={() => navigate(-1)}
-          data-testid="back-btn"
+          onClick={() => step > 1 ? prevStep() : navigate(-1)}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            Add New Animal
+            Register New Animal
           </h1>
-          <p className="text-slate-500 text-sm">Register your livestock</p>
+          <p className="text-slate-500 text-sm">Step {step} of {totalSteps}</p>
         </div>
       </div>
 
       {/* Step Indicator */}
       <div className="flex items-center justify-center gap-2 mb-8">
-        {[1, 2].map((s) => (
+        {[1, 2, 3].map((s) => (
           <React.Fragment key={s}>
-            <div className={`step-indicator ${step >= s ? 'active' : 'pending'}`}>
-              {step > s ? <Check className="h-4 w-4" /> : s}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+              step > s ? 'bg-green-500 text-white' : 
+              step === s ? 'bg-primary text-white' : 
+              'bg-slate-200 text-slate-500'
+            }`}>
+              {step > s ? <Check className="h-5 w-5" /> : s}
             </div>
-            {s < 2 && (
-              <div className={`w-16 h-1 rounded ${step > s ? 'bg-primary' : 'bg-slate-200'}`} />
+            {s < 3 && (
+              <div className={`w-12 h-1 rounded ${step > s ? 'bg-green-500' : 'bg-slate-200'}`} />
             )}
           </React.Fragment>
         ))}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {step === 1 ? 'Basic Information' : 'Additional Details'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {step === 1 && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="tag_id">Tag ID *</Label>
-                  <Input
-                    id="tag_id"
-                    placeholder="Enter unique tag ID"
-                    {...form.register('tag_id')}
-                    data-testid="tag-id-input"
-                  />
-                  {form.formState.errors.tag_id && (
-                    <p className="text-sm text-red-500">{form.formState.errors.tag_id.message}</p>
-                  )}
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        {/* Step 1: Species & Basic Info */}
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Animal Type</CardTitle>
+              <CardDescription>Choose species and enter tag number</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Species Selection as Grid */}
+              <div className="space-y-2">
+                <Label>Species *</Label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  {speciesOptions.map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        form.setValue('species', value);
+                        form.setValue('breed', ''); // Reset breed when species changes
+                      }}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        watchSpecies === value
+                          ? 'border-primary bg-green-50 text-primary'
+                          : 'border-slate-200 hover:border-green-300'
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{label}</span>
+                    </button>
+                  ))}
                 </div>
+                {form.formState.errors.species && (
+                  <p className="text-sm text-red-500">{form.formState.errors.species.message}</p>
+                )}
+              </div>
 
+              {/* Breed Selection */}
+              {watchSpecies && (
                 <div className="space-y-2">
-                  <Label htmlFor="species">Species *</Label>
+                  <Label>Breed *</Label>
                   <Select 
-                    onValueChange={(val) => form.setValue('species', val)}
-                    defaultValue={form.getValues('species')}
+                    value={form.watch('breed')}
+                    onValueChange={(val) => form.setValue('breed', val)}
                   >
-                    <SelectTrigger data-testid="species-select">
-                      <SelectValue placeholder="Select species" />
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select breed" />
                     </SelectTrigger>
                     <SelectContent>
-                      {speciesOptions.map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {breedOptions.map((breed) => (
+                        <SelectItem key={breed} value={breed}>{breed}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {form.formState.errors.species && (
-                    <p className="text-sm text-red-500">{form.formState.errors.species.message}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="breed">Breed *</Label>
-                  <Input
-                    id="breed"
-                    placeholder="Enter breed"
-                    {...form.register('breed')}
-                    data-testid="breed-input"
-                  />
                   {form.formState.errors.breed && (
                     <p className="text-sm text-red-500">{form.formState.errors.breed.message}</p>
                   )}
                 </div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="age_months">Age (months) *</Label>
-                    <Input
-                      id="age_months"
-                      type="number"
-                      placeholder="Age in months"
-                      {...form.register('age_months')}
-                      data-testid="age-input"
-                    />
-                    {form.formState.errors.age_months && (
-                      <p className="text-sm text-red-500">{form.formState.errors.age_months.message}</p>
-                    )}
-                  </div>
+              {/* Tag Number */}
+              <div className="space-y-2">
+                <Label>Tag Number / ID *</Label>
+                <Input
+                  placeholder="Enter unique tag number"
+                  {...form.register('tag_id')}
+                />
+                {form.formState.errors.tag_id && (
+                  <p className="text-sm text-red-500">{form.formState.errors.tag_id.message}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gender *</Label>
-                    <Select 
-                      onValueChange={(val) => form.setValue('gender', val)}
-                      defaultValue={form.getValues('gender')}
-                    >
-                      <SelectTrigger data-testid="gender-select">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {genderOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {form.formState.errors.gender && (
-                      <p className="text-sm text-red-500">{form.formState.errors.gender.message}</p>
-                    )}
-                  </div>
-                </div>
+        {/* Step 2: Age, Sex, Status */}
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Animal Details</CardTitle>
+              <CardDescription>Enter age, sex, and current status</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Age */}
+              <div className="space-y-2">
+                <Label>Age (in months) *</Label>
+                <Input
+                  type="number"
+                  placeholder="Enter age in months"
+                  {...form.register('age_months')}
+                />
+                <p className="text-xs text-slate-500">
+                  {watchAge && parseInt(watchAge) >= 12 
+                    ? `Approximately ${Math.floor(parseInt(watchAge) / 12)} year(s) ${parseInt(watchAge) % 12} month(s)`
+                    : 'Enter age in months (e.g., 24 for 2 years)'}
+                </p>
+                {form.formState.errors.age_months && (
+                  <p className="text-sm text-red-500">{form.formState.errors.age_months.message}</p>
+                )}
+              </div>
 
-                <Button 
-                  type="button" 
-                  className="w-full"
-                  onClick={() => {
-                    const fields = ['tag_id', 'species', 'breed', 'age_months', 'gender'];
-                    form.trigger(fields).then(isValid => {
-                      if (isValid) setStep(2);
-                    });
-                  }}
-                  data-testid="next-step-btn"
+              {/* Sex */}
+              <div className="space-y-2">
+                <Label>Sex *</Label>
+                <RadioGroup 
+                  value={form.watch('gender')}
+                  onValueChange={(val) => form.setValue('gender', val)}
+                  className="flex gap-4"
                 >
-                  Next Step
-                </Button>
-              </>
-            )}
-
-            {step === 2 && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select 
-                    onValueChange={(val) => form.setValue('status', val)}
-                    defaultValue={form.getValues('status') || 'healthy'}
-                  >
-                    <SelectTrigger data-testid="status-select">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
-                    <Input
-                      id="color"
-                      placeholder="Animal color"
-                      {...form.register('color')}
-                      data-testid="color-input"
-                    />
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="male" id="male" />
+                    <Label htmlFor="male" className="cursor-pointer">Male</Label>
                   </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="weight_kg">Weight (kg)</Label>
-                    <Input
-                      id="weight_kg"
-                      type="number"
-                      step="0.1"
-                      placeholder="Weight in kg"
-                      {...form.register('weight_kg')}
-                      data-testid="weight-input"
-                    />
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="female" id="female" />
+                    <Label htmlFor="female" className="cursor-pointer">Female</Label>
                   </div>
-                </div>
+                </RadioGroup>
+                {form.formState.errors.gender && (
+                  <p className="text-sm text-red-500">{form.formState.errors.gender.message}</p>
+                )}
+              </div>
 
+              {/* Status */}
+              <div className="space-y-2">
+                <Label>Current Status *</Label>
+                <Select 
+                  value={form.watch('status')}
+                  onValueChange={(val) => form.setValue('status', val)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.status && (
+                  <p className="text-sm text-red-500">{form.formState.errors.status.message}</p>
+                )}
+              </div>
+
+              {/* Origin */}
+              <div className="space-y-2">
+                <Label>Born or Purchased?</Label>
+                <RadioGroup 
+                  value={form.watch('origin')}
+                  onValueChange={(val) => form.setValue('origin', val)}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="born" id="born" />
+                    <Label htmlFor="born" className="cursor-pointer">Born in Farm</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="purchased" id="purchased" />
+                    <Label htmlFor="purchased" className="cursor-pointer">Purchased</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Additional Details */}
+        {step === 3 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+              <CardDescription>Optional details for better identification</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Additional notes..."
-                    {...form.register('notes')}
-                    data-testid="notes-input"
+                  <Label>Color</Label>
+                  <Input
+                    placeholder="e.g., Black, Brown"
+                    {...form.register('color')}
                   />
                 </div>
-
-                <div className="flex gap-4">
-                  <Button 
-                    type="button" 
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => setStep(1)}
-                    data-testid="prev-step-btn"
-                  >
-                    Previous
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1"
-                    disabled={loading}
-                    data-testid="submit-animal-btn"
-                  >
-                    {loading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Register Animal
-                  </Button>
+                <div className="space-y-2">
+                  <Label>Weight (kg)</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    placeholder="Weight in kg"
+                    {...form.register('weight_kg')}
+                  />
                 </div>
-              </>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Identification Marks</Label>
+                <Textarea
+                  placeholder="Any unique marks like spots, scars, etc."
+                  {...form.register('identification_marks')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Remarks</Label>
+                <Textarea
+                  placeholder="Any additional notes"
+                  {...form.register('notes')}
+                />
+              </div>
+
+              {/* Summary */}
+              <Card className="bg-green-50 border-green-200">
+                <CardContent className="p-4">
+                  <h4 className="font-semibold text-green-800 mb-2">Summary</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <p><span className="text-slate-500">Species:</span> {speciesDisplayNames[watchSpecies]}</p>
+                    <p><span className="text-slate-500">Breed:</span> {form.watch('breed')}</p>
+                    <p><span className="text-slate-500">Tag:</span> {form.watch('tag_id')}</p>
+                    <p><span className="text-slate-500">Sex:</span> {form.watch('gender')}</p>
+                    <p><span className="text-slate-500">Age:</span> {form.watch('age_months')} months</p>
+                    <p><span className="text-slate-500">Status:</span> {form.watch('status')}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Navigation Buttons */}
+        <div className="flex gap-4 mt-6">
+          {step > 1 && (
+            <Button type="button" variant="outline" onClick={prevStep} className="flex-1">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          )}
+          
+          {step < totalSteps ? (
+            <Button type="button" onClick={nextStep} className="flex-1">
+              Save & Next
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button type="submit" disabled={loading} className="flex-1">
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Register Animal
+            </Button>
+          )}
+        </div>
+      </form>
     </div>
   );
 };
 
-export default AddAnimal;
+export default AddAnimalEnhanced;

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, ChevronRight, Loader2, Syringe, Calendar } from 'lucide-react';
+import { Plus, Loader2, Syringe, Calendar } from 'lucide-react';
 import { vaccinationsAPI, animalsAPI } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { formatDate, speciesDisplayNames } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -16,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -25,6 +25,118 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// Species-specific vaccine lists
+const vaccinesBySpecies = {
+  cattle: [
+    'FMD (Foot and Mouth Disease)',
+    'HS (Haemorrhagic Septicaemia)',
+    'BQ (Black Quarter)',
+    'Brucellosis',
+    'Anthrax',
+    'Theileriosis',
+    'IBR (Infectious Bovine Rhinotracheitis)',
+    'Rabies',
+    'Other'
+  ],
+  buffalo: [
+    'FMD (Foot and Mouth Disease)',
+    'HS (Haemorrhagic Septicaemia)',
+    'BQ (Black Quarter)',
+    'Brucellosis',
+    'Anthrax',
+    'Rabies',
+    'Other'
+  ],
+  sheep: [
+    'PPR (Peste des Petits Ruminants)',
+    'Enterotoxaemia',
+    'Sheep Pox',
+    'FMD (Foot and Mouth Disease)',
+    'HS (Haemorrhagic Septicaemia)',
+    'Brucellosis',
+    'Anthrax',
+    'Rabies',
+    'Other'
+  ],
+  goat: [
+    'PPR (Peste des Petits Ruminants)',
+    'Enterotoxaemia',
+    'Goat Pox',
+    'FMD (Foot and Mouth Disease)',
+    'HS (Haemorrhagic Septicaemia)',
+    'Brucellosis',
+    'Anthrax',
+    'Rabies',
+    'CCPP',
+    'Other'
+  ],
+  pig: [
+    'Classical Swine Fever (CSF)',
+    'FMD (Foot and Mouth Disease)',
+    'Swine Erysipelas',
+    'Porcine Parvovirus',
+    'Rabies',
+    'Other'
+  ],
+  poultry: [
+    'Marek\'s Disease',
+    'Newcastle Disease (Ranikhet)',
+    'Infectious Bursal Disease (Gumboro)',
+    'Fowl Pox',
+    'Infectious Bronchitis',
+    'Avian Influenza',
+    'Fowl Cholera',
+    'Other'
+  ],
+  dog: [
+    'Rabies',
+    'Distemper',
+    'Parvovirus',
+    'Hepatitis',
+    'Leptospirosis',
+    'Kennel Cough',
+    'DHPP (Combination)',
+    'Other'
+  ],
+  cat: [
+    'Rabies',
+    'Feline Panleukopenia',
+    'Feline Calicivirus',
+    'Feline Rhinotracheitis',
+    'FVRCP (Combination)',
+    'Other'
+  ],
+  horse: [
+    'Tetanus',
+    'Equine Influenza',
+    'Strangles',
+    'Rabies',
+    'EHV (Equine Herpesvirus)',
+    'Other'
+  ],
+  donkey: [
+    'Tetanus',
+    'Rabies',
+    'Equine Influenza',
+    'Other'
+  ],
+  camel: [
+    'Anthrax',
+    'Rabies',
+    'Camel Pox',
+    'Other'
+  ],
+};
+
+const routeOptions = [
+  { value: 'im', label: 'Intramuscular (IM)' },
+  { value: 'sc', label: 'Subcutaneous (SC)' },
+  { value: 'id', label: 'Intradermal (ID)' },
+  { value: 'oral', label: 'Oral' },
+  { value: 'nasal', label: 'Nasal' },
+  { value: 'eye', label: 'Eye Drop' },
+];
+
 const speciesCategories = [
   { key: 'all', label: 'All' },
   { key: 'cattle_buffalo', label: 'Buffalo/Cattle', species: ['cattle', 'buffalo'] },
@@ -33,19 +145,23 @@ const speciesCategories = [
   { key: 'others', label: 'Others', species: ['pig', 'dog', 'cat', 'horse', 'donkey', 'camel'] },
 ];
 
-const Vaccinations = () => {
-  const navigate = useNavigate();
+const VaccinationsEnhanced = () => {
   const [vaccinations, setVaccinations] = useState([]);
   const [animals, setAnimals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [selectedAnimal, setSelectedAnimal] = useState(null);
+  
   const [newVaccination, setNewVaccination] = useState({
     animal_id: '',
     vaccine_name: '',
     batch_number: '',
     dose: '',
+    route: '',
+    administered_by: '',
+    vaccination_date: new Date().toISOString().split('T')[0],
     next_due_date: '',
     remarks: '',
   });
@@ -65,16 +181,25 @@ const Vaccinations = () => {
       setAnimals(animalsResponse.data);
     } catch (error) {
       toast.error('Failed to fetch data');
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleAnimalSelect = (animalId) => {
+    const animal = animals.find(a => a.id === animalId);
+    setSelectedAnimal(animal);
+    setNewVaccination(prev => ({ 
+      ...prev, 
+      animal_id: animalId,
+      vaccine_name: '' // Reset vaccine when animal changes
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newVaccination.animal_id || !newVaccination.vaccine_name) {
-      toast.error('Please fill in required fields');
+      toast.error('Please select animal and vaccine');
       return;
     }
 
@@ -88,9 +213,13 @@ const Vaccinations = () => {
         vaccine_name: '',
         batch_number: '',
         dose: '',
+        route: '',
+        administered_by: '',
+        vaccination_date: new Date().toISOString().split('T')[0],
         next_due_date: '',
         remarks: '',
       });
+      setSelectedAnimal(null);
       fetchData();
     } catch (error) {
       toast.error('Failed to add vaccination');
@@ -109,6 +238,11 @@ const Vaccinations = () => {
     return category?.species?.includes(animal.species);
   });
 
+  // Get vaccines for selected animal's species
+  const availableVaccines = selectedAnimal 
+    ? vaccinesBySpecies[selectedAnimal.species] || []
+    : [];
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -117,50 +251,103 @@ const Vaccinations = () => {
           <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Manrope, sans-serif' }}>
             Vaccinations
           </h1>
-          <p className="text-slate-500 text-sm">Track vaccination records for your animals</p>
+          <p className="text-slate-500 text-sm">Record vaccination history for your animals</p>
         </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2" data-testid="add-vaccination-btn">
+            <Button className="gap-2">
               <Plus className="h-4 w-4" />
               Add Vaccination
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add Vaccination Record</DialogTitle>
+              <DialogTitle>Record Vaccination</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+              {/* Animal Selection */}
               <div className="space-y-2">
                 <Label>Select Animal *</Label>
                 <Select 
                   value={newVaccination.animal_id}
-                  onValueChange={(val) => setNewVaccination({...newVaccination, animal_id: val})}
+                  onValueChange={handleAnimalSelect}
                 >
-                  <SelectTrigger data-testid="select-animal">
+                  <SelectTrigger>
                     <SelectValue placeholder="Choose animal" />
                   </SelectTrigger>
                   <SelectContent>
                     {animals.map(animal => (
                       <SelectItem key={animal.id} value={animal.id}>
-                        {animal.tag_id} - {animal.breed}
+                        {animal.tag_id} - {animal.breed} ({speciesDisplayNames[animal.species]})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
+              {/* Vaccine Selection (Species-specific) */}
+              {selectedAnimal && (
+                <div className="space-y-2">
+                  <Label>Vaccine Name *</Label>
+                  <Select 
+                    value={newVaccination.vaccine_name}
+                    onValueChange={(val) => setNewVaccination({...newVaccination, vaccine_name: val})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select vaccine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableVaccines.map(vaccine => (
+                        <SelectItem key={vaccine} value={vaccine}>{vaccine}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">
+                    Showing vaccines for {speciesDisplayNames[selectedAnimal.species]}
+                  </p>
+                </div>
+              )}
+
+              {/* Date */}
               <div className="space-y-2">
-                <Label>Vaccine Name *</Label>
+                <Label>Date of Vaccination *</Label>
                 <Input
-                  placeholder="Enter vaccine name"
-                  value={newVaccination.vaccine_name}
-                  onChange={(e) => setNewVaccination({...newVaccination, vaccine_name: e.target.value})}
-                  data-testid="vaccine-name-input"
+                  type="date"
+                  value={newVaccination.vaccination_date}
+                  onChange={(e) => setNewVaccination({...newVaccination, vaccination_date: e.target.value})}
                 />
               </div>
 
+              {/* Dose and Route */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Dose</Label>
+                  <Input
+                    placeholder="e.g., 2ml, 1 dose"
+                    value={newVaccination.dose}
+                    onChange={(e) => setNewVaccination({...newVaccination, dose: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Route</Label>
+                  <Select 
+                    value={newVaccination.route}
+                    onValueChange={(val) => setNewVaccination({...newVaccination, route: val})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {routeOptions.map(route => (
+                        <SelectItem key={route.value} value={route.value}>{route.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Batch and Given By */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Batch Number</Label>
@@ -171,15 +358,16 @@ const Vaccinations = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Dose</Label>
+                  <Label>Given By</Label>
                   <Input
-                    placeholder="e.g., 2ml"
-                    value={newVaccination.dose}
-                    onChange={(e) => setNewVaccination({...newVaccination, dose: e.target.value})}
+                    placeholder="Vet/Paravet name"
+                    value={newVaccination.administered_by}
+                    onChange={(e) => setNewVaccination({...newVaccination, administered_by: e.target.value})}
                   />
                 </div>
               </div>
 
+              {/* Next Due Date */}
               <div className="space-y-2">
                 <Label>Next Due Date</Label>
                 <Input
@@ -189,16 +377,24 @@ const Vaccinations = () => {
                 />
               </div>
 
+              {/* Remarks */}
               <div className="space-y-2">
                 <Label>Remarks</Label>
-                <Input
+                <Textarea
                   placeholder="Any additional notes"
                   value={newVaccination.remarks}
                   onChange={(e) => setNewVaccination({...newVaccination, remarks: e.target.value})}
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={formLoading} data-testid="submit-vaccination-btn">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800">
+                  <strong>Note:</strong> This is for recording vaccination history only. 
+                  Vaccination should be done by qualified veterinary personnel.
+                </p>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={formLoading}>
                 {formLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Add Record
               </Button>
@@ -247,9 +443,15 @@ const Vaccinations = () => {
                             <p className="text-sm text-slate-500">
                               {animal ? `${animal.tag_id} - ${animal.breed}` : 'Unknown Animal'}
                             </p>
+                            {vacc.dose && <p className="text-xs text-slate-400">Dose: {vacc.dose}</p>}
                           </div>
                         </div>
-                        <Badge variant="outline">{formatDate(vacc.date)}</Badge>
+                        <div className="text-right">
+                          <Badge variant="outline">{formatDate(vacc.date)}</Badge>
+                          {vacc.administered_by && (
+                            <p className="text-xs text-slate-500 mt-1">By: {vacc.administered_by}</p>
+                          )}
+                        </div>
                       </div>
                       
                       {vacc.next_due_date && (
@@ -257,10 +459,6 @@ const Vaccinations = () => {
                           <Calendar className="h-4 w-4" />
                           Next due: {formatDate(vacc.next_due_date)}
                         </div>
-                      )}
-                      
-                      {vacc.remarks && (
-                        <p className="mt-2 text-sm text-slate-500">{vacc.remarks}</p>
                       )}
                     </CardContent>
                   </Card>
@@ -274,4 +472,4 @@ const Vaccinations = () => {
   );
 };
 
-export default Vaccinations;
+export default VaccinationsEnhanced;
