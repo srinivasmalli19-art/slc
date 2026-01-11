@@ -869,6 +869,443 @@ async def get_admin_stats(user: dict = Depends(require_role([UserRole.ADMIN]))):
         "total_vaccinations": vaccinations_count
     }
 
+# ============ VET PROFILE & INSTITUTION MODELS ============
+
+class VetProfileBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    registration_number: str
+    qualification: str
+    mobile_number: str
+    institution_name: Optional[str] = None
+    working_village: Optional[str] = None
+    mandal: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    date_of_joining: Optional[str] = None
+    remarks: Optional[str] = None
+
+class VetProfileCreate(VetProfileBase):
+    pass
+
+class VetProfileResponse(VetProfileBase):
+    id: str
+    vet_id: str
+    user_id: str
+    user_name: str
+    is_complete: bool
+    created_at: str
+    updated_at: str
+
+class InstitutionBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    institution_name: str
+    location: str
+    mandal: str
+    district: str
+    state: str
+    contact_number: Optional[str] = None
+    jurisdiction_villages: List[str] = []
+
+class InstitutionCreate(InstitutionBase):
+    pass
+
+class InstitutionResponse(InstitutionBase):
+    id: str
+    is_verified: bool
+    created_by: str
+    created_at: str
+    updated_at: str
+
+# ============ OPD/IPD REGISTER MODELS ============
+
+class OPDCaseBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    tag_number: str
+    farmer_name: str
+    farmer_village: str
+    farmer_phone: Optional[str] = None
+    species: Species
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    symptoms: str
+    tentative_diagnosis: str
+    treatment: str
+    result: CaseResult = CaseResult.ONGOING
+    follow_up_date: Optional[str] = None
+    remarks: Optional[str] = None
+
+class OPDCaseCreate(OPDCaseBase):
+    pass
+
+class OPDCaseResponse(OPDCaseBase):
+    id: str
+    case_number: str
+    serial_number: int
+    case_type: str
+    vet_id: str
+    vet_name: str
+    case_date: str
+    created_at: str
+    updated_at: str
+
+class IPDCaseBase(OPDCaseBase):
+    admission_date: str
+    discharge_date: Optional[str] = None
+    bed_number: Optional[str] = None
+    daily_observations: List[str] = []
+
+class IPDCaseCreate(IPDCaseBase):
+    pass
+
+class IPDCaseResponse(IPDCaseBase):
+    id: str
+    case_number: str
+    serial_number: int
+    case_type: str
+    vet_id: str
+    vet_name: str
+    case_date: str
+    created_at: str
+    updated_at: str
+
+# ============ VET PROFILE & INSTITUTION ROUTES ============
+
+async def generate_vet_id():
+    """Generate unique Vet ID: VET-YYYY-XXXXX"""
+    year = datetime.now(timezone.utc).year
+    count = await db.vet_profiles.count_documents({"vet_id": {"$regex": f"^VET-{year}-"}})
+    return f"VET-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/profile", response_model=VetProfileResponse)
+async def create_vet_profile(profile: VetProfileCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    # Check if profile already exists
+    existing = await db.vet_profiles.find_one({"user_id": user["id"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Profile already exists. Use PUT to update.")
+    
+    # Check if registration number is unique
+    reg_exists = await db.vet_profiles.find_one({"registration_number": profile.registration_number})
+    if reg_exists:
+        raise HTTPException(status_code=400, detail="Registration number already registered")
+    
+    profile_dict = profile.model_dump()
+    profile_dict["id"] = str(uuid.uuid4())
+    profile_dict["vet_id"] = await generate_vet_id()
+    profile_dict["user_id"] = user["id"]
+    profile_dict["user_name"] = user["name"]
+    profile_dict["is_complete"] = all([
+        profile.registration_number,
+        profile.qualification,
+        profile.mobile_number
+    ])
+    profile_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    profile_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.vet_profiles.insert_one(profile_dict)
+    if "_id" in profile_dict:
+        del profile_dict["_id"]
+    return VetProfileResponse(**profile_dict)
+
+@api_router.get("/vet/profile", response_model=Optional[VetProfileResponse])
+async def get_vet_profile(user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    profile = await db.vet_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    if not profile:
+        return None
+    return VetProfileResponse(**profile)
+
+@api_router.put("/vet/profile", response_model=VetProfileResponse)
+async def update_vet_profile(profile: VetProfileCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.vet_profiles.find_one({"user_id": user["id"]})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    # Registration number cannot be changed once set
+    if existing.get("registration_number") and existing["registration_number"] != profile.registration_number:
+        raise HTTPException(status_code=400, detail="Registration number cannot be modified")
+    
+    update_dict = profile.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["is_complete"] = all([
+        profile.registration_number,
+        profile.qualification,
+        profile.mobile_number
+    ])
+    
+    await db.vet_profiles.update_one({"user_id": user["id"]}, {"$set": update_dict})
+    updated = await db.vet_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    return VetProfileResponse(**updated)
+
+@api_router.post("/vet/institution", response_model=InstitutionResponse)
+async def create_institution(institution: InstitutionCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    inst_dict = institution.model_dump()
+    inst_dict["id"] = str(uuid.uuid4())
+    inst_dict["is_verified"] = False
+    inst_dict["created_by"] = user["id"]
+    inst_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    inst_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.institutions.insert_one(inst_dict)
+    if "_id" in inst_dict:
+        del inst_dict["_id"]
+    return InstitutionResponse(**inst_dict)
+
+@api_router.get("/vet/institutions", response_model=List[InstitutionResponse])
+async def get_institutions(user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    institutions = await db.institutions.find({}, {"_id": 0}).to_list(100)
+    return [InstitutionResponse(**i) for i in institutions]
+
+@api_router.get("/vet/institution/{institution_id}", response_model=InstitutionResponse)
+async def get_institution(institution_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    institution = await db.institutions.find_one({"id": institution_id}, {"_id": 0})
+    if not institution:
+        raise HTTPException(status_code=404, detail="Institution not found")
+    return InstitutionResponse(**institution)
+
+# ============ OPD REGISTER ROUTES ============
+
+async def generate_opd_case_number(case_type: str = "OPD"):
+    """Generate case number: OPD-YYYY-XXXXX"""
+    year = datetime.now(timezone.utc).year
+    prefix = case_type.upper()
+    count = await db.opd_cases.count_documents({
+        "case_number": {"$regex": f"^{prefix}-{year}-"}
+    })
+    return f"{prefix}-{year}-{str(count + 1).zfill(5)}"
+
+async def get_serial_number_for_year(case_type: str = "OPD"):
+    """Get next serial number for the year"""
+    year = datetime.now(timezone.utc).year
+    start_of_year = datetime(year, 1, 1, tzinfo=timezone.utc).isoformat()
+    count = await db.opd_cases.count_documents({
+        "case_type": case_type.lower(),
+        "created_at": {"$gte": start_of_year}
+    })
+    return count + 1
+
+@api_router.post("/vet/opd", response_model=OPDCaseResponse)
+async def create_opd_case(case: OPDCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    # Check if vet profile is complete
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    
+    case_dict = case.model_dump()
+    case_dict["id"] = str(uuid.uuid4())
+    case_dict["case_number"] = await generate_opd_case_number("OPD")
+    case_dict["serial_number"] = await get_serial_number_for_year("OPD")
+    case_dict["case_type"] = "opd"
+    case_dict["vet_id"] = user["id"]
+    case_dict["vet_name"] = user["name"]
+    case_dict["case_date"] = datetime.now(timezone.utc).isoformat()
+    case_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    case_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.opd_cases.insert_one(case_dict)
+    if "_id" in case_dict:
+        del case_dict["_id"]
+    return OPDCaseResponse(**case_dict)
+
+@api_router.get("/vet/opd", response_model=List[OPDCaseResponse])
+async def get_opd_cases(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    species: Optional[Species] = None,
+    result: Optional[CaseResult] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {"case_type": "opd"}
+    
+    if date_from:
+        query["case_date"] = {"$gte": date_from}
+    if date_to:
+        if "case_date" in query:
+            query["case_date"]["$lte"] = date_to
+        else:
+            query["case_date"] = {"$lte": date_to}
+    if species:
+        query["species"] = species.value
+    if result:
+        query["result"] = result.value
+    
+    cases = await db.opd_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [OPDCaseResponse(**c) for c in cases]
+
+@api_router.get("/vet/opd/{case_id}", response_model=OPDCaseResponse)
+async def get_opd_case(case_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    case = await db.opd_cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    return OPDCaseResponse(**case)
+
+@api_router.put("/vet/opd/{case_id}", response_model=OPDCaseResponse)
+async def update_opd_case(case_id: str, case: OPDCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.opd_cases.find_one({"id": case_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    update_dict = case.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.opd_cases.update_one({"id": case_id}, {"$set": update_dict})
+    updated = await db.opd_cases.find_one({"id": case_id}, {"_id": 0})
+    return OPDCaseResponse(**updated)
+
+# ============ IPD REGISTER ROUTES ============
+
+@api_router.post("/vet/ipd", response_model=IPDCaseResponse)
+async def create_ipd_case(case: IPDCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    case_dict = case.model_dump()
+    case_dict["id"] = str(uuid.uuid4())
+    case_dict["case_number"] = await generate_opd_case_number("IPD")
+    case_dict["serial_number"] = await get_serial_number_for_year("IPD")
+    case_dict["case_type"] = "ipd"
+    case_dict["vet_id"] = user["id"]
+    case_dict["vet_name"] = user["name"]
+    case_dict["case_date"] = datetime.now(timezone.utc).isoformat()
+    case_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    case_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.opd_cases.insert_one(case_dict)
+    if "_id" in case_dict:
+        del case_dict["_id"]
+    return IPDCaseResponse(**case_dict)
+
+@api_router.get("/vet/ipd", response_model=List[IPDCaseResponse])
+async def get_ipd_cases(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {"case_type": "ipd"}
+    
+    if date_from:
+        query["case_date"] = {"$gte": date_from}
+    if date_to:
+        if "case_date" in query:
+            query["case_date"]["$lte"] = date_to
+        else:
+            query["case_date"] = {"$lte": date_to}
+    
+    cases = await db.opd_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [IPDCaseResponse(**c) for c in cases]
+
+# ============ VET DASHBOARD STATS (ENHANCED) ============
+
+@api_router.get("/dashboard/vet-stats-detailed")
+async def get_vet_stats_detailed(user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    
+    # OPD cases today
+    opd_today = await db.opd_cases.count_documents({
+        "case_type": "opd",
+        "case_date": {"$gte": today_start}
+    })
+    
+    # IPD admissions (active)
+    ipd_active = await db.opd_cases.count_documents({
+        "case_type": "ipd",
+        "discharge_date": None
+    })
+    
+    # Vaccinations today (approximate from all vaccinations)
+    vaccinations_today = await db.vaccinations.count_documents({
+        "date": {"$gte": today_start}
+    })
+    
+    # AI cases today
+    ai_today = await db.breeding.count_documents({
+        "breeding_type": "AI",
+        "date": {"$gte": today_start}
+    })
+    
+    # Mortality cases (result = died)
+    mortality_today = await db.opd_cases.count_documents({
+        "result": "died",
+        "updated_at": {"$gte": today_start}
+    })
+    
+    # Total counts
+    total_opd = await db.opd_cases.count_documents({"case_type": "opd"})
+    total_ipd = await db.opd_cases.count_documents({"case_type": "ipd"})
+    total_animals = await db.animals.count_documents({})
+    knowledge_entries = await db.knowledge_center.count_documents({})
+    
+    # Pending follow-ups
+    pending_followups = await db.opd_cases.count_documents({
+        "result": "followup",
+        "follow_up_date": {"$lte": datetime.now(timezone.utc).isoformat()}
+    })
+    
+    # Check vet profile completion
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    profile_complete = vet_profile.get("is_complete", False) if vet_profile else False
+    
+    return {
+        "opd_today": opd_today,
+        "ipd_active": ipd_active,
+        "vaccinations_today": vaccinations_today,
+        "ai_today": ai_today,
+        "mortality_today": mortality_today,
+        "total_opd": total_opd,
+        "total_ipd": total_ipd,
+        "total_animals": total_animals,
+        "knowledge_entries": knowledge_entries,
+        "pending_followups": pending_followups,
+        "profile_complete": profile_complete,
+        "vet_id": vet_profile.get("vet_id") if vet_profile else None
+    }
+
+# ============ ALERTS API ============
+
+@api_router.get("/vet/alerts")
+async def get_vet_alerts(user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    alerts = []
+    today = datetime.now(timezone.utc).isoformat()
+    
+    # Check for pending follow-ups
+    pending_followups = await db.opd_cases.find({
+        "result": "followup",
+        "follow_up_date": {"$lte": today}
+    }, {"_id": 0}).to_list(10)
+    
+    for fu in pending_followups:
+        alerts.append({
+            "type": "followup",
+            "severity": "warning",
+            "title": "Follow-up Due",
+            "message": f"Case {fu.get('case_number')} - {fu.get('farmer_name')} requires follow-up",
+            "case_id": fu.get("id"),
+            "date": fu.get("follow_up_date")
+        })
+    
+    # Check vet profile completion
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    if not vet_profile or not vet_profile.get("is_complete"):
+        alerts.append({
+            "type": "profile",
+            "severity": "info",
+            "title": "Complete Your Profile",
+            "message": "Please complete your veterinarian profile to enable certificates",
+            "case_id": None,
+            "date": today
+        })
+    
+    # Check for high-risk cases (zoonotic diseases in diagnosis)
+    high_risk_cases = await db.opd_cases.find({
+        "tentative_diagnosis": {"$regex": "|".join(HIGH_RISK_DISEASES), "$options": "i"},
+        "result": {"$ne": "recovered"}
+    }, {"_id": 0}).to_list(10)
+    
+    for case in high_risk_cases:
+        alerts.append({
+            "type": "zoonotic",
+            "severity": "critical",
+            "title": "Zoonotic Disease Alert",
+            "message": f"Case {case.get('case_number')} - Suspected {case.get('tentative_diagnosis')}. Follow safety protocols.",
+            "case_id": case.get("id"),
+            "date": case.get("case_date")
+        })
+    
+    return {"alerts": alerts, "total": len(alerts)}
+
 # ============ DASHBOARD STATS ============
 
 @api_router.get("/dashboard/farmer-stats")
