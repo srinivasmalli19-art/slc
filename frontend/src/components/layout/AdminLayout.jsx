@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, BookOpen, Settings, 
-  Shield, BarChart3, X, ChevronRight
+  LayoutDashboard, Users, BookOpen, Shield, Settings, 
+  FileText, Bell, Database, Lock, ChevronDown, ChevronRight, 
+  X, Menu, Activity, ClipboardList, Building2, AlertTriangle,
+  History, Download
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Disclaimer from '@/components/layout/Disclaimer';
@@ -11,68 +13,209 @@ import { useAuth } from '@/context/AuthContext';
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState({});
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const toggleSubmenu = (key) => {
+    setExpandedMenus(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/admin/dashboard' },
-    { icon: Users, label: 'User Management', path: '/admin/users' },
-    { icon: BookOpen, label: 'Knowledge Center', path: '/admin/knowledge' },
-    { icon: Shield, label: 'Safety Alerts', path: '/admin/safety' },
-    { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
-    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+    { 
+      icon: LayoutDashboard, 
+      label: '1. Dashboard', 
+      path: '/admin/dashboard' 
+    },
+    { 
+      icon: Users, 
+      label: '2. User Management', 
+      key: 'users',
+      submenu: [
+        { label: 'All Users', path: '/admin/users' },
+        { label: 'Farmer Management', path: '/admin/users/farmers' },
+        { label: 'Paravet Management', path: '/admin/users/paravets' },
+        { label: 'Veterinarian Management', path: '/admin/users/vets' },
+      ]
+    },
+    { 
+      icon: Shield, 
+      label: '3. Role & Permissions', 
+      path: '/admin/rbac' 
+    },
+    { 
+      icon: BookOpen, 
+      label: '4. Knowledge Center', 
+      key: 'knowledge',
+      submenu: [
+        { label: 'All Entries', path: '/admin/knowledge' },
+        { label: 'CBC Reference', path: '/admin/knowledge/cbc' },
+        { label: 'Biochemistry', path: '/admin/knowledge/biochemistry' },
+        { label: 'Parasitology', path: '/admin/knowledge/parasitology' },
+        { label: 'Version History', path: '/admin/knowledge/history' },
+      ]
+    },
+    { 
+      icon: AlertTriangle, 
+      label: '5. Safety Rules', 
+      key: 'safety',
+      submenu: [
+        { label: 'Zoonotic Diseases', path: '/admin/safety/zoonotic' },
+        { label: 'Safety Protocols', path: '/admin/safety/protocols' },
+        { label: 'Government Reporting', path: '/admin/safety/reporting' },
+      ]
+    },
+    { 
+      icon: ClipboardList, 
+      label: '6. Audit Logs', 
+      path: '/admin/audit-logs' 
+    },
+    { 
+      icon: Settings, 
+      label: '7. System Settings', 
+      key: 'settings',
+      submenu: [
+        { label: 'General Settings', path: '/admin/settings/general' },
+        { label: 'Alert Thresholds', path: '/admin/settings/alerts' },
+        { label: 'Notification Rules', path: '/admin/settings/notifications' },
+      ]
+    },
+    { 
+      icon: Lock, 
+      label: '8. Data Locking', 
+      path: '/admin/data-lock' 
+    },
+    { 
+      icon: FileText, 
+      label: '9. Reports', 
+      key: 'reports',
+      submenu: [
+        { label: 'User Activity', path: '/admin/reports/user-activity' },
+        { label: 'Disease Surveillance', path: '/admin/reports/disease' },
+        { label: 'Vaccination Coverage', path: '/admin/reports/vaccination' },
+        { label: 'Export Data', path: '/admin/reports/export' },
+      ]
+    },
+    { 
+      icon: Bell, 
+      label: '10. Notifications', 
+      path: '/admin/notifications' 
+    },
+    { 
+      icon: Database, 
+      label: '11. Backup & Integrity', 
+      path: '/admin/backup' 
+    },
+    { 
+      icon: Building2, 
+      label: '12. Institutions', 
+      path: '/admin/institutions' 
+    },
   ];
 
+  const renderMenuItem = (item, isMobile = false) => {
+    if (item.submenu) {
+      const isExpanded = expandedMenus[item.key];
+      return (
+        <div key={item.key}>
+          <button
+            onClick={() => toggleSubmenu(item.key)}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors text-slate-300 hover:bg-slate-800",
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className="h-5 w-5 text-slate-400" />
+              <span className="text-sm font-medium">{item.label}</span>
+            </div>
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-slate-500" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-slate-500" />
+            )}
+          </button>
+          {isExpanded && (
+            <div className="ml-8 mt-1 space-y-1">
+              {item.submenu.map((sub) => (
+                <NavLink
+                  key={sub.path}
+                  to={sub.path}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                  className={({ isActive }) => cn(
+                    "block px-3 py-2 rounded-lg text-sm transition-colors",
+                    isActive 
+                      ? "bg-red-600 text-white" 
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  )}
+                >
+                  {sub.label}
+                </NavLink>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={() => isMobile && setSidebarOpen(false)}
+        className={({ isActive }) => cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+          isActive 
+            ? "bg-red-600 text-white" 
+            : "text-slate-300 hover:bg-slate-800"
+        )}
+      >
+        <item.icon className={cn("h-5 w-5")} />
+        <span className="text-sm font-medium">{item.label}</span>
+      </NavLink>
+    );
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-100">
       <Header 
         onMenuClick={() => setSidebarOpen(true)} 
         title="Admin Portal"
+        theme="dark"
       />
       
+      {/* Admin Info Banner */}
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <p className="text-slate-300 text-sm">
+            <span className="font-semibold text-white">{user?.name || 'Administrator'}</span>
+            <span className="text-red-400 ml-2">• System Administrator</span>
+          </p>
+          <span className="text-xs text-slate-500 hidden sm:block">
+            Access Level: System-wide Control | Data Governance
+          </span>
+        </div>
+      </div>
+
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className={cn(
-          "hidden lg:flex flex-col bg-slate-900 text-white transition-all duration-300",
-          sidebarCollapsed ? "w-16" : "w-64"
-        )}>
-          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <div>
-                <p className="font-semibold">{user?.name}</p>
-                <p className="text-xs text-slate-400">Administrator</p>
-              </div>
-            )}
-            <button 
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-1 hover:bg-slate-700 rounded"
-            >
-              <ChevronRight className={cn(
-                "h-4 w-4 transition-transform",
-                sidebarCollapsed ? "" : "rotate-180"
-              )} />
-            </button>
+        <aside className="hidden lg:block w-72 bg-slate-900 text-white overflow-y-auto">
+          <div className="p-3 border-b border-slate-800 bg-red-900/30">
+            <h3 className="font-semibold text-sm text-red-400">ADMIN CONTROL CENTER</h3>
+            <p className="text-xs text-slate-500 mt-1">Governance & Audit Authority</p>
           </div>
-          
-          <nav className="flex-1 p-2 space-y-1">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
-                  isActive 
-                    ? "bg-primary text-white" 
-                    : "text-slate-300 hover:bg-slate-800",
-                  sidebarCollapsed && "justify-center"
-                )}
-                title={sidebarCollapsed ? item.label : undefined}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span className="text-sm">{item.label}</span>}
-              </NavLink>
-            ))}
+          <nav className="p-3 space-y-1">
+            {menuItems.map(item => renderMenuItem(item, false))}
           </nav>
+          
+          {/* Footer Warning */}
+          <div className="p-3 border-t border-slate-800 mt-auto">
+            <p className="text-xs text-slate-500 text-center">
+              All actions are logged and auditable
+            </p>
+          </div>
         </aside>
 
         {/* Mobile Sidebar Overlay */}
@@ -85,44 +228,31 @@ const AdminLayout = () => {
 
         {/* Mobile Sidebar */}
         <div className={cn(
-          "fixed inset-y-0 left-0 w-72 bg-slate-900 text-white shadow-xl z-50 transform transition-transform duration-300 lg:hidden",
+          "fixed inset-y-0 left-0 w-80 bg-slate-900 shadow-xl z-50 transform transition-transform duration-300 lg:hidden overflow-y-auto",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-red-900/30">
             <div>
-              <p className="font-semibold">{user?.name}</p>
-              <p className="text-xs text-slate-400">Administrator</p>
+              <h2 className="font-semibold text-white">Admin Control</h2>
+              <p className="text-xs text-slate-400">Governance Authority</p>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-2 hover:bg-slate-700 rounded-full"
+              className="p-2 hover:bg-slate-800 rounded-full text-white"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <nav className="p-4 space-y-2">
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) => cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                  isActive 
-                    ? "bg-primary text-white" 
-                    : "text-slate-300 hover:bg-slate-800"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+          <nav className="p-3 space-y-1">
+            {menuItems.map(item => renderMenuItem(item, true))}
           </nav>
         </div>
 
         {/* Main Content */}
         <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
 
