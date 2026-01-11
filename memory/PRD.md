@@ -171,12 +171,17 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Prioritized Backlog
 
-### P1 - High Priority (Next - Batch 2)
+### P1 - High Priority (Next - Batch 3)
 - [ ] **IPD Register** - Admission/discharge tracking with bed numbers
-- [ ] **Surgical Case Register** - Surgery types, anesthesia, outcomes
-- [ ] **Gynaecology Register** - Symptoms, diagnosis, treatment
-- [ ] **Castration Register** - Species, method, results
-- [ ] **Vaccination Registers** - Large/Small Animals with species-specific vaccines
+- [ ] **Vaccination Register** - Large/Small Animals with species-specific vaccines
+- [ ] **Deworming Register** - Drug selection, due date tracking
+- [ ] **AI Register** - Artificial Insemination multi-tab records
+
+### ✅ COMPLETED - Batch 2 (January 11, 2026)
+- [x] **Surgical Case Register** - Surgery types (13 options), anesthesia (6 types), outcomes (6 options)
+- [x] **Gynaecology Register** - Reproductive conditions (13 types), treatments, breeding history
+- [x] **Castration Register** - Methods (5 options), body weight, anesthesia tracking
+- [x] **GVA & Economic Analysis** - Calculation engine, results breakdown, PDF download
 
 ### P2 - GVA & Analytics (Batch 3 - Critical)
 - [ ] **GVA Calculation Engine** - Milk, Meat, Egg calculations (admin-configurable percentages)
