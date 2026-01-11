@@ -59,23 +59,9 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 10. Donkey
 11. Camel
 
-## What's Been Implemented (January 2026)
+## What's Been Implemented
 
-### ✅ Backend (FastAPI + MongoDB) - COMPLETE
-- REST API with 24+ endpoints
-- JWT authentication with role-based access control
-- User management (register, login, status toggle)
-- Animals CRUD operations (all 11 species)
-- Vaccinations CRUD operations
-- Deworming CRUD operations
-- Breeding/AI CRUD operations
-- Diagnostics with auto-interpretation (Vet only)
-- Knowledge Center CRUD
-- Guest utilities (area calculator, interest calculator)
-- PDF report generation with safety alerts
-- Dashboard statistics for all roles
-
-### ✅ Frontend - Farmer Section - COMPLETE
+### ✅ Farmer Section - COMPLETE (January 10, 2026)
 - **Login Page**: Role selection with Farmer/Paravet/Vet/Admin/Guest cards
 - **My Profile**: Farmer details, edit functionality, stats display
 - **My Animals**: List view with species filter tabs, search, animal cards
@@ -83,51 +69,98 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - **Vaccinations**: List view, species-specific vaccine selection, history records
 - **Deworming**: List view, drug selection, due date tracking with overdue alerts
 - **Breeding**: Natural mating and AI records with expected calving dates
-- **Ration Calculator**: Buffalo ICAR-aligned calculator with feeds and costs (Cattle/Sheep/Goat coming soon)
+- **Ration Calculator**: Buffalo ICAR-aligned calculator with feeds and costs
 - **Area Measurement**: Length/Width calculator with 6 unit conversions
 - **Interest Calculator**: Simple and Compound interest with EMI calculation
 
-### ✅ Frontend - Other Sections
-- **Vet Dashboard**: Stats, Quick Actions, Diagnostics, Knowledge Center
-- **Admin Dashboard**: User management, system stats
-- **Guest Utilities**: Area Calculator, Interest Calculator
-- **Common Components**: Disclaimer footer, responsive layouts
+### ✅ Veterinarian Section - Phase 1 COMPLETE (January 11, 2026)
+- **VetLayout**: Enhanced sidebar with 14 numbered modules and collapsible submenus
+- **Vet Dashboard**:
+  - Summary cards (OPD Today, IPD Active, Vaccinations, AI Cases, Mortality)
+  - Alerts Panel with zoonotic disease warnings and profile completion alerts
+  - Quick Actions (New OPD Case, Diagnostics, Registers, Certificates, Knowledge Center, Reports)
+  - Overall Statistics (Total OPD, Total IPD, Animals Registered, Pending Follow-ups)
+  - Zoonotic Safety Reminder banner
+- **Vet Profile Register**:
+  - Registration Details (Registration Number - locked once saved, Qualification, Mobile, Date of Joining)
+  - Institution & Location (Institution Name, Village, Mandal, District, State)
+  - Profile completion status badge (VET-YYYY-XXXXX format)
+- **Institution Basic Data**:
+  - Institution list with verification status
+  - Add Institution dialog with all required fields
+  - Jurisdiction villages multi-select
+  - Admin verification lock note
+- **OPD Register**:
+  - Case list with yearly auto-numbering (OPD-2026-00001)
+  - Serial numbers
+  - Patient & Farmer details (Tag, Species, Owner, Village, Phone, Age)
+  - Clinical details (Symptoms, Tentative Diagnosis, Treatment)
+  - Result tracking (Ongoing, Recovered, Referred, Follow-up, Died)
+  - Zoonotic disease warning for high-risk diagnoses
+  - Search and filter (by species, result)
+- **Knowledge Center**: Reference database (existing)
+- **Diagnostics**: Auto-interpretation (existing)
+
+## Backend APIs
+
+### Vet Profile & Institution
+- POST `/api/vet/profile` - Create vet profile
+- GET `/api/vet/profile` - Get vet profile
+- PUT `/api/vet/profile` - Update vet profile (registration number locked)
+- POST `/api/vet/institution` - Create institution
+- GET `/api/vet/institutions` - Get institutions list
+- GET `/api/vet/institution/{id}` - Get institution by ID
+
+### OPD/IPD
+- POST `/api/vet/opd` - Create OPD case
+- GET `/api/vet/opd` - Get OPD cases with filters
+- GET `/api/vet/opd/{id}` - Get single OPD case
+- PUT `/api/vet/opd/{id}` - Update OPD case
+- POST `/api/vet/ipd` - Create IPD case
+- GET `/api/vet/ipd` - Get IPD cases
+
+### Dashboard & Alerts
+- GET `/api/dashboard/vet-stats-detailed` - Enhanced vet statistics
+- GET `/api/vet/alerts` - Vet alerts (follow-ups, profile, zoonotic)
 
 ## Prioritized Backlog
 
-### P0 - Critical (Next Sprint) - DONE ✅
-- ✅ Complete Farmer Profile page
-- ✅ Complete My Animals with Add Animal wizard
-- ✅ Complete Vaccinations page with species-specific vaccines
-- ✅ Complete Deworming page
-- ✅ Complete Breeding page
-- ✅ Complete Ration Calculator for Buffalo
-- ✅ Complete Area Measurement calculator
-- ✅ Complete Interest Calculator
-
 ### P1 - High Priority (Next)
-- [ ] Expand Ration Calculator for Cattle, Sheep, Goat, Pig
-- [ ] Implement Milk Records module
-- [ ] Implement Vet Diagnostics entry with auto-interpretation
-- [ ] Offline support (PWA service worker)
-- [ ] Admin Knowledge Center editor
+- [ ] **IPD Register** - Full implementation with admission/discharge
+- [ ] **Vaccination Register** - Large Animals & Small Animals/Flock
+- [ ] **AI Register** - With PD result and calf birth linkage
+- [ ] **Surgical Case Register** - Surgery types, anesthesia, outcomes
+- [ ] **Certificates** - Health Certificate, Health & Valuation Certificate
 
 ### P2 - Medium Priority
-- [ ] Reports generation module (Vaccination, Deworming, Breeding reports)
-- [ ] Ayurvedic Practice reference page
-- [ ] Animal Care Tips page
-- [ ] Near By Animal Sales page
-- [ ] Analytics dashboard with charts
+- [ ] Expand Ration Calculator for Cattle, Sheep, Goat, Pig
+- [ ] Implement Milk Records module
+- [ ] Clinical Registers (Gynaecology, Castration)
+- [ ] Disease & Mortality (Outbreak Register, Mortality Register)
+- [ ] Post-Mortem Register and Certificate
 
-### P3 - Low Priority
+### P3 - Paravet Section
+- [ ] Paravet Dashboard
+- [ ] Paravet-specific registers (subset of Vet modules)
+- [ ] "Raise Request" workflow to Vet
+
+### P4 - Admin Section
+- [ ] Master Admin Dashboard with RBAC
+- [ ] User Management (Farmer/Paravet/Vet)
+- [ ] Knowledge Center Editor
+- [ ] Audit Logs & Compliance
+
+### P5 - Future/Backlog
+- [ ] PDF Report Generation
+- [ ] Offline PWA support
 - [ ] Multi-language support
-- [ ] Dark mode
-- [ ] Observed Problems tracking
+- [ ] Stock Management registers
+- [ ] GVA Analytics
 
 ## Test Credentials
 - Farmer: 9876543210 / test123
-- Vet: 9876543211 / vet123 (may need registration)
-- Admin: 9876543212 / admin123 (may need registration)
+- Veterinarian: 9876543211 / vet123
+- Admin: To be created
 - Guest: No registration required
 
 ## Tech Stack
@@ -136,38 +169,18 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - Auth: JWT tokens
 - State: React Context API
 
-## API Endpoints
-
-### Authentication
-- POST `/api/auth/register` - Register new user
-- POST `/api/auth/login` - Login with phone/password/role
-- GET `/api/auth/me` - Get current user
-- POST `/api/auth/guest-session` - Create guest session
-
-### Animals
-- POST `/api/animals` - Create animal
-- GET `/api/animals` - Get all animals (with optional species filter)
-- GET `/api/animals/{id}` - Get animal by ID
-- PUT `/api/animals/{id}` - Update animal
-- DELETE `/api/animals/{id}` - Delete animal
-
-### Health Records
-- POST `/api/vaccinations` - Create vaccination record
-- GET `/api/vaccinations` - Get vaccination records
-- POST `/api/deworming` - Create deworming record
-- GET `/api/deworming` - Get deworming records
-- POST `/api/breeding` - Create breeding record
-- GET `/api/breeding` - Get breeding records
-
-### Utilities
-- POST `/api/utilities/area-calculator` - Calculate area
-- POST `/api/utilities/interest-calculator` - Calculate interest
-
-### Dashboard
-- GET `/api/dashboard/farmer-stats` - Get farmer statistics
-- GET `/api/dashboard/vet-stats` - Get vet statistics
-
 ## Testing Status
-- **Backend Tests**: 33/33 passed (100%)
-- **Frontend Tests**: All farmer pages verified
-- **Test Report**: `/app/test_reports/iteration_2.json`
+- **Farmer Tests**: 33/33 passed (100%) - `/app/test_reports/iteration_2.json`
+- **Vet Tests**: 17/17 backend + all frontend passed (100%) - `/app/test_reports/iteration_3.json`
+
+## High-Risk Zoonotic Diseases (Safety Engine)
+1. Brucellosis
+2. Anthrax
+3. Leptospirosis
+4. Tuberculosis
+5. Avian Influenza
+6. Rabies
+7. FMD (Foot and Mouth Disease)
+
+## Global Disclaimer
+"This system provides clinical reference and decision support only. Final diagnosis and treatment decisions must be made by a registered veterinarian."
