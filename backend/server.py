@@ -1338,6 +1338,978 @@ async def get_vet_stats(user: dict = Depends(require_role([UserRole.VETERINARIAN
         "knowledge_entries": knowledge_entries
     }
 
+# ============ ADMIN MODELS ============
+
+class AdminActionType(str, Enum):
+    USER_CREATE = "user_create"
+    USER_UPDATE = "user_update"
+    USER_ACTIVATE = "user_activate"
+    USER_DEACTIVATE = "user_deactivate"
+    USER_LOCK = "user_lock"
+    USER_UNLOCK = "user_unlock"
+    KNOWLEDGE_CREATE = "knowledge_create"
+    KNOWLEDGE_UPDATE = "knowledge_update"
+    KNOWLEDGE_ARCHIVE = "knowledge_archive"
+    KNOWLEDGE_PUBLISH = "knowledge_publish"
+    SAFETY_RULE_CREATE = "safety_rule_create"
+    SAFETY_RULE_UPDATE = "safety_rule_update"
+    RECORD_LOCK = "record_lock"
+    RECORD_UNLOCK = "record_unlock"
+    SETTING_UPDATE = "setting_update"
+    NOTIFICATION_SEND = "notification_send"
+
+class AuditLogBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    action_type: AdminActionType
+    target_type: str  # user, knowledge, safety_rule, record, setting
+    target_id: str
+    before_value: Optional[Dict[str, Any]] = None
+    after_value: Optional[Dict[str, Any]] = None
+    reason: Optional[str] = None
+
+class AuditLogResponse(AuditLogBase):
+    id: str
+    admin_id: str
+    admin_name: str
+    timestamp: str
+    ip_address: Optional[str] = None
+
+class SafetyRuleBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    disease_name: str
+    species_affected: List[str] = []
+    ppe_instructions: str
+    isolation_protocols: str
+    milk_meat_restriction: str
+    disposal_procedures: str
+    government_reporting: str
+    is_active: bool = True
+
+class SafetyRuleCreate(SafetyRuleBase):
+    pass
+
+class SafetyRuleResponse(SafetyRuleBase):
+    id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+    version: int
+
+class KnowledgeEntryBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    category: str  # cbc, biochemistry, parasitology, etc.
+    species: Species
+    parameter_name: str
+    normal_range_min: Optional[float] = None
+    normal_range_max: Optional[float] = None
+    unit: str
+    interpretation_rules: str
+    pathognomonic_symptoms: Optional[str] = None
+    suggested_management: Optional[str] = None
+
+class KnowledgeEntryCreate(KnowledgeEntryBase):
+    pass
+
+class KnowledgeEntryResponse(KnowledgeEntryBase):
+    id: str
+    version: int
+    status: str  # draft, published, archived
+    created_by: str
+    created_at: str
+    updated_at: str
+
+class SystemNotificationBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    title: str
+    message: str
+    target_roles: List[str] = []  # empty = all
+    target_regions: List[str] = []  # empty = all
+    priority: str = "normal"  # low, normal, high, urgent
+    expires_at: Optional[str] = None
+
+class SystemNotificationCreate(SystemNotificationBase):
+    pass
+
+class SystemNotificationResponse(SystemNotificationBase):
+    id: str
+    created_by: str
+    created_at: str
+    read_count: int
+
+class SystemSettingBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    key: str
+    value: str
+    description: Optional[str] = None
+    category: str  # general, alerts, notifications, display
+
+# ============ ADMIN HELPER FUNCTIONS ============
+
+async def log_admin_action(
+    admin_id: str,
+    admin_name: str,
+    action_type: AdminActionType,
+    target_type: str,
+    target_id: str,
+    before_value: Optional[Dict] = None,
+    after_value: Optional[Dict] = None,
+    reason: Optional[str] = None,
+    ip_address: Optional[str] = None
+):
+    """Create immutable audit log entry"""
+    log_entry = {
+        "id": str(uuid.uuid4()),
+        "admin_id": admin_id,
+        "admin_name": admin_name,
+        "action_type": action_type.value,
+        "target_type": target_type,
+        "target_id": target_id,
+        "before_value": before_value,
+        "after_value": after_value,
+        "reason": reason,
+        "ip_address": ip_address,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    await db.audit_logs.insert_one(log_entry)
+    return log_entry
+
+# ============ ADMIN DASHBOARD ROUTES ============
+
+@api_router.get("/admin/dashboard-stats")
+async def get_admin_dashboard_stats(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get comprehensive admin dashboard statistics"""
+    
+    # User counts by role
+    total_farmers = await db.users.count_documents({"role": "farmer"})
+    total_paravets = await db.users.count_documents({"role": "paravet"})
+    total_vets = await db.users.count_documents({"role": "veterinarian"})
+    total_animals = await db.animals.count_documents({})
+    active_institutions = await db.institutions.count_documents({"is_verified": True})
+    
+    # Pending approvals
+    pending_users = await db.users.count_documents({"is_active": False})
+    pending_institutions = await db.institutions.count_documents({"is_verified": False})
+    
+    # Knowledge center stats
+    knowledge_entries = await db.knowledge_center.count_documents({})
+    draft_knowledge = await db.knowledge_center.count_documents({"status": "draft"})
+    
+    # Safety rules
+    safety_rules = await db.safety_rules.count_documents({"is_active": True})
+    
+    # Recent activity
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    
+    opd_cases_today = await db.opd_cases.count_documents({"case_date": {"$gte": today_start}})
+    vaccinations_today = await db.vaccinations.count_documents({"date": {"$gte": today_start}})
+    
+    # Zoonotic alerts
+    zoonotic_cases = await db.opd_cases.count_documents({
+        "tentative_diagnosis": {"$regex": "|".join(HIGH_RISK_DISEASES), "$options": "i"},
+        "result": {"$ne": "recovered"}
+    })
+    
+    return {
+        "users": {
+            "total_farmers": total_farmers,
+            "total_paravets": total_paravets,
+            "total_vets": total_vets,
+            "pending_approvals": pending_users
+        },
+        "animals": {
+            "total": total_animals
+        },
+        "institutions": {
+            "active": active_institutions,
+            "pending_verification": pending_institutions
+        },
+        "knowledge_center": {
+            "total_entries": knowledge_entries,
+            "pending_drafts": draft_knowledge
+        },
+        "safety": {
+            "active_rules": safety_rules,
+            "zoonotic_alerts": zoonotic_cases
+        },
+        "activity": {
+            "opd_cases_today": opd_cases_today,
+            "vaccinations_today": vaccinations_today
+        }
+    }
+
+@api_router.get("/admin/alerts")
+async def get_admin_alerts(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get admin-specific alerts"""
+    alerts = []
+    
+    # Pending user approvals
+    pending_users = await db.users.find({"is_active": False}, {"_id": 0}).to_list(10)
+    for pu in pending_users:
+        alerts.append({
+            "type": "user_approval",
+            "severity": "info",
+            "title": "Pending User Approval",
+            "message": f"{pu.get('name')} ({pu.get('role')}) awaiting activation",
+            "target_id": pu.get("id"),
+            "date": pu.get("created_at")
+        })
+    
+    # Pending institution verifications
+    pending_inst = await db.institutions.find({"is_verified": False}, {"_id": 0}).to_list(10)
+    for pi in pending_inst:
+        alerts.append({
+            "type": "institution_verification",
+            "severity": "info",
+            "title": "Institution Verification Pending",
+            "message": f"{pi.get('institution_name')} awaiting verification",
+            "target_id": pi.get("id"),
+            "date": pi.get("created_at")
+        })
+    
+    # Zoonotic disease alerts
+    zoonotic_cases = await db.opd_cases.find({
+        "tentative_diagnosis": {"$regex": "|".join(HIGH_RISK_DISEASES), "$options": "i"},
+        "result": {"$ne": "recovered"}
+    }, {"_id": 0}).to_list(10)
+    
+    for case in zoonotic_cases:
+        alerts.append({
+            "type": "zoonotic",
+            "severity": "critical",
+            "title": "Zoonotic Disease Outbreak Alert",
+            "message": f"Case {case.get('case_number')} - {case.get('tentative_diagnosis')} in {case.get('farmer_village')}",
+            "target_id": case.get("id"),
+            "date": case.get("case_date")
+        })
+    
+    # Draft knowledge entries pending review
+    draft_entries = await db.knowledge_center.find({"status": "draft"}, {"_id": 0}).to_list(5)
+    for de in draft_entries:
+        alerts.append({
+            "type": "knowledge_review",
+            "severity": "warning",
+            "title": "Knowledge Entry Pending Review",
+            "message": f"{de.get('parameter_name')} for {de.get('species')} needs review",
+            "target_id": de.get("id"),
+            "date": de.get("updated_at")
+        })
+    
+    return {"alerts": alerts, "total": len(alerts)}
+
+# ============ USER MANAGEMENT ROUTES ============
+
+@api_router.get("/admin/users")
+async def get_all_users(
+    role: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get all users with optional filters"""
+    query = {}
+    
+    if role:
+        query["role"] = role
+    if status == "active":
+        query["is_active"] = True
+    elif status == "inactive":
+        query["is_active"] = False
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}},
+            {"village": {"$regex": search, "$options": "i"}}
+        ]
+    
+    users = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(500)
+    return users
+
+@api_router.get("/admin/users/{user_id}")
+async def get_user_detail(user_id: str, user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get detailed user information"""
+    target_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get additional profile info based on role
+    if target_user["role"] == "veterinarian":
+        vet_profile = await db.vet_profiles.find_one({"user_id": user_id}, {"_id": 0})
+        target_user["vet_profile"] = vet_profile
+    
+    # Get activity stats
+    if target_user["role"] == "farmer":
+        animals_count = await db.animals.count_documents({"farmer_id": user_id})
+        target_user["stats"] = {"animals": animals_count}
+    elif target_user["role"] == "veterinarian":
+        opd_count = await db.opd_cases.count_documents({"vet_id": user_id})
+        target_user["stats"] = {"opd_cases": opd_count}
+    
+    return target_user
+
+@api_router.put("/admin/users/{user_id}/status")
+async def update_user_status(
+    user_id: str,
+    is_active: bool,
+    reason: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Activate or deactivate a user"""
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if target_user["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Cannot modify admin status")
+    
+    old_status = target_user.get("is_active")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"is_active": is_active, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.USER_ACTIVATE if is_active else AdminActionType.USER_DEACTIVATE,
+        target_type="user",
+        target_id=user_id,
+        before_value={"is_active": old_status},
+        after_value={"is_active": is_active},
+        reason=reason
+    )
+    
+    return {"message": f"User {'activated' if is_active else 'deactivated'} successfully"}
+
+@api_router.put("/admin/users/{user_id}/lock")
+async def lock_unlock_user(
+    user_id: str,
+    locked: bool,
+    reason: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Lock or unlock a user account"""
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"is_locked": locked, "lock_reason": reason if locked else None}}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.USER_LOCK if locked else AdminActionType.USER_UNLOCK,
+        target_type="user",
+        target_id=user_id,
+        before_value={"is_locked": target_user.get("is_locked", False)},
+        after_value={"is_locked": locked},
+        reason=reason
+    )
+    
+    return {"message": f"User {'locked' if locked else 'unlocked'} successfully"}
+
+@api_router.get("/admin/users/{user_id}/activity")
+async def get_user_activity(user_id: str, user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get user activity logs (for farmers/paravets/vets)"""
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    activity = []
+    
+    if target_user["role"] == "farmer":
+        # Get farmer's animal registrations, vaccinations, etc.
+        animals = await db.animals.find({"farmer_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(20)
+        for a in animals:
+            activity.append({
+                "type": "animal_registration",
+                "description": f"Registered animal: {a.get('tag_id')} ({a.get('species')})",
+                "date": a.get("created_at")
+            })
+    
+    elif target_user["role"] == "veterinarian":
+        # Get vet's OPD cases
+        cases = await db.opd_cases.find({"vet_id": user_id}, {"_id": 0}).sort("case_date", -1).to_list(20)
+        for c in cases:
+            activity.append({
+                "type": "opd_case",
+                "description": f"OPD Case: {c.get('case_number')} - {c.get('tentative_diagnosis')}",
+                "date": c.get("case_date")
+            })
+    
+    return {"user": target_user.get("name"), "role": target_user.get("role"), "activity": activity}
+
+# ============ VET VERIFICATION ROUTES ============
+
+@api_router.put("/admin/vets/{user_id}/verify-registration")
+async def verify_vet_registration(
+    user_id: str,
+    verified: bool,
+    remarks: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Verify veterinarian registration number"""
+    vet_profile = await db.vet_profiles.find_one({"user_id": user_id})
+    if not vet_profile:
+        raise HTTPException(status_code=404, detail="Vet profile not found")
+    
+    await db.vet_profiles.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "registration_verified": verified,
+            "verification_date": datetime.now(timezone.utc).isoformat(),
+            "verification_remarks": remarks,
+            "verified_by": user["id"]
+        }}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.USER_UPDATE,
+        target_type="vet_profile",
+        target_id=user_id,
+        after_value={"registration_verified": verified, "remarks": remarks}
+    )
+    
+    return {"message": f"Vet registration {'verified' if verified else 'rejected'}"}
+
+@api_router.put("/admin/vets/{user_id}/certificate-privileges")
+async def update_certificate_privileges(
+    user_id: str,
+    enabled: bool,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Enable or disable certificate generation privileges for a vet"""
+    vet_profile = await db.vet_profiles.find_one({"user_id": user_id})
+    if not vet_profile:
+        raise HTTPException(status_code=404, detail="Vet profile not found")
+    
+    await db.vet_profiles.update_one(
+        {"user_id": user_id},
+        {"$set": {"certificate_privileges": enabled}}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.USER_UPDATE,
+        target_type="vet_profile",
+        target_id=user_id,
+        after_value={"certificate_privileges": enabled}
+    )
+    
+    return {"message": f"Certificate privileges {'enabled' if enabled else 'disabled'}"}
+
+# ============ INSTITUTION MANAGEMENT ============
+
+@api_router.put("/admin/institutions/{institution_id}/verify")
+async def verify_institution(
+    institution_id: str,
+    verified: bool,
+    remarks: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Verify an institution"""
+    institution = await db.institutions.find_one({"id": institution_id})
+    if not institution:
+        raise HTTPException(status_code=404, detail="Institution not found")
+    
+    await db.institutions.update_one(
+        {"id": institution_id},
+        {"$set": {
+            "is_verified": verified,
+            "verification_date": datetime.now(timezone.utc).isoformat(),
+            "verified_by": user["id"],
+            "verification_remarks": remarks
+        }}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.USER_UPDATE,
+        target_type="institution",
+        target_id=institution_id,
+        after_value={"is_verified": verified}
+    )
+    
+    return {"message": f"Institution {'verified' if verified else 'verification revoked'}"}
+
+# ============ KNOWLEDGE CENTER MANAGEMENT ============
+
+@api_router.post("/admin/knowledge")
+async def create_knowledge_entry(
+    entry: KnowledgeEntryCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create a new knowledge center entry"""
+    entry_dict = entry.model_dump()
+    entry_dict["id"] = str(uuid.uuid4())
+    entry_dict["version"] = 1
+    entry_dict["status"] = "draft"
+    entry_dict["created_by"] = user["id"]
+    entry_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    entry_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.knowledge_center.insert_one(entry_dict)
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.KNOWLEDGE_CREATE,
+        target_type="knowledge",
+        target_id=entry_dict["id"],
+        after_value={"parameter_name": entry.parameter_name, "species": entry.species.value}
+    )
+    
+    if "_id" in entry_dict:
+        del entry_dict["_id"]
+    return KnowledgeEntryResponse(**entry_dict)
+
+@api_router.get("/admin/knowledge")
+async def get_knowledge_entries(
+    category: Optional[str] = None,
+    species: Optional[Species] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get knowledge center entries with admin access"""
+    query = {}
+    if category:
+        query["category"] = category
+    if species:
+        query["species"] = species.value
+    if status:
+        query["status"] = status
+    
+    entries = await db.knowledge_center.find(query, {"_id": 0}).sort("updated_at", -1).to_list(500)
+    return entries
+
+@api_router.put("/admin/knowledge/{entry_id}")
+async def update_knowledge_entry(
+    entry_id: str,
+    entry: KnowledgeEntryCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update a knowledge center entry (creates new version)"""
+    existing = await db.knowledge_center.find_one({"id": entry_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    # Archive old version
+    old_version = existing.copy()
+    old_version["_id"] = None
+    old_version["id"] = str(uuid.uuid4())
+    old_version["status"] = "archived"
+    old_version["archived_at"] = datetime.now(timezone.utc).isoformat()
+    await db.knowledge_center_history.insert_one(old_version)
+    
+    # Update current entry
+    update_dict = entry.model_dump()
+    update_dict["version"] = existing.get("version", 1) + 1
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["updated_by"] = user["id"]
+    
+    await db.knowledge_center.update_one({"id": entry_id}, {"$set": update_dict})
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.KNOWLEDGE_UPDATE,
+        target_type="knowledge",
+        target_id=entry_id,
+        before_value={"version": existing.get("version")},
+        after_value={"version": update_dict["version"]}
+    )
+    
+    updated = await db.knowledge_center.find_one({"id": entry_id}, {"_id": 0})
+    return updated
+
+@api_router.put("/admin/knowledge/{entry_id}/publish")
+async def publish_knowledge_entry(
+    entry_id: str,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Publish a knowledge center entry"""
+    existing = await db.knowledge_center.find_one({"id": entry_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    await db.knowledge_center.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "status": "published",
+            "published_at": datetime.now(timezone.utc).isoformat(),
+            "published_by": user["id"]
+        }}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.KNOWLEDGE_PUBLISH,
+        target_type="knowledge",
+        target_id=entry_id
+    )
+    
+    return {"message": "Knowledge entry published"}
+
+@api_router.put("/admin/knowledge/{entry_id}/archive")
+async def archive_knowledge_entry(
+    entry_id: str,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Archive a knowledge center entry (never delete)"""
+    existing = await db.knowledge_center.find_one({"id": entry_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    await db.knowledge_center.update_one(
+        {"id": entry_id},
+        {"$set": {
+            "status": "archived",
+            "archived_at": datetime.now(timezone.utc).isoformat(),
+            "archived_by": user["id"]
+        }}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.KNOWLEDGE_ARCHIVE,
+        target_type="knowledge",
+        target_id=entry_id
+    )
+    
+    return {"message": "Knowledge entry archived"}
+
+# ============ SAFETY RULES MANAGEMENT ============
+
+@api_router.post("/admin/safety-rules")
+async def create_safety_rule(
+    rule: SafetyRuleCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create a new safety rule for zoonotic diseases"""
+    rule_dict = rule.model_dump()
+    rule_dict["id"] = str(uuid.uuid4())
+    rule_dict["version"] = 1
+    rule_dict["created_by"] = user["id"]
+    rule_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    rule_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.safety_rules.insert_one(rule_dict)
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.SAFETY_RULE_CREATE,
+        target_type="safety_rule",
+        target_id=rule_dict["id"],
+        after_value={"disease_name": rule.disease_name}
+    )
+    
+    if "_id" in rule_dict:
+        del rule_dict["_id"]
+    return SafetyRuleResponse(**rule_dict)
+
+@api_router.get("/admin/safety-rules")
+async def get_safety_rules(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get all safety rules"""
+    rules = await db.safety_rules.find({}, {"_id": 0}).to_list(100)
+    return rules
+
+@api_router.put("/admin/safety-rules/{rule_id}")
+async def update_safety_rule(
+    rule_id: str,
+    rule: SafetyRuleCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update a safety rule"""
+    existing = await db.safety_rules.find_one({"id": rule_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    
+    update_dict = rule.model_dump()
+    update_dict["version"] = existing.get("version", 1) + 1
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["updated_by"] = user["id"]
+    
+    await db.safety_rules.update_one({"id": rule_id}, {"$set": update_dict})
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.SAFETY_RULE_UPDATE,
+        target_type="safety_rule",
+        target_id=rule_id,
+        before_value={"version": existing.get("version")},
+        after_value={"version": update_dict["version"]}
+    )
+    
+    updated = await db.safety_rules.find_one({"id": rule_id}, {"_id": 0})
+    return updated
+
+@api_router.get("/safety-rules/{disease_name}")
+async def get_safety_rule_by_disease(disease_name: str):
+    """Get safety rules for a specific disease (public endpoint for vet/paravet)"""
+    rule = await db.safety_rules.find_one(
+        {"disease_name": {"$regex": disease_name, "$options": "i"}, "is_active": True},
+        {"_id": 0}
+    )
+    return rule
+
+# ============ AUDIT LOGS ============
+
+@api_router.get("/admin/audit-logs")
+async def get_audit_logs(
+    action_type: Optional[str] = None,
+    target_type: Optional[str] = None,
+    admin_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get audit logs (immutable, read-only)"""
+    query = {}
+    
+    if action_type:
+        query["action_type"] = action_type
+    if target_type:
+        query["target_type"] = target_type
+    if admin_id:
+        query["admin_id"] = admin_id
+    if date_from:
+        query["timestamp"] = {"$gte": date_from}
+    if date_to:
+        if "timestamp" in query:
+            query["timestamp"]["$lte"] = date_to
+        else:
+            query["timestamp"] = {"$lte": date_to}
+    
+    logs = await db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).to_list(500)
+    return {"logs": logs, "total": len(logs)}
+
+# ============ SYSTEM NOTIFICATIONS ============
+
+@api_router.post("/admin/notifications")
+async def create_notification(
+    notification: SystemNotificationCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create a system-wide notification"""
+    notif_dict = notification.model_dump()
+    notif_dict["id"] = str(uuid.uuid4())
+    notif_dict["created_by"] = user["id"]
+    notif_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    notif_dict["read_count"] = 0
+    
+    await db.system_notifications.insert_one(notif_dict)
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.NOTIFICATION_SEND,
+        target_type="notification",
+        target_id=notif_dict["id"],
+        after_value={"title": notification.title, "priority": notification.priority}
+    )
+    
+    if "_id" in notif_dict:
+        del notif_dict["_id"]
+    return notif_dict
+
+@api_router.get("/admin/notifications")
+async def get_admin_notifications(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get all system notifications"""
+    notifications = await db.system_notifications.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return notifications
+
+@api_router.get("/notifications")
+async def get_user_notifications(user: dict = Depends(get_current_user)):
+    """Get notifications for current user"""
+    query = {
+        "$or": [
+            {"target_roles": {"$size": 0}},  # All users
+            {"target_roles": user.get("role")}
+        ]
+    }
+    
+    notifications = await db.system_notifications.find(query, {"_id": 0}).sort("created_at", -1).to_list(20)
+    return notifications
+
+# ============ SYSTEM SETTINGS ============
+
+@api_router.get("/admin/settings")
+async def get_system_settings(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get all system settings"""
+    settings = await db.system_settings.find({}, {"_id": 0}).to_list(100)
+    return settings
+
+@api_router.put("/admin/settings/{key}")
+async def update_system_setting(
+    key: str,
+    value: str,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update a system setting"""
+    existing = await db.system_settings.find_one({"key": key})
+    
+    if existing:
+        old_value = existing.get("value")
+        await db.system_settings.update_one(
+            {"key": key},
+            {"$set": {"value": value, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        await db.system_settings.insert_one({
+            "key": key,
+            "value": value,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        })
+        old_value = None
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.SETTING_UPDATE,
+        target_type="setting",
+        target_id=key,
+        before_value={"value": old_value},
+        after_value={"value": value}
+    )
+    
+    return {"message": f"Setting '{key}' updated"}
+
+# ============ DATA LOCKING ============
+
+@api_router.put("/admin/records/{record_type}/{record_id}/lock")
+async def lock_record(
+    record_type: str,
+    record_id: str,
+    locked: bool,
+    reason: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Lock or unlock a record (OPD, IPD, etc.)"""
+    collection_map = {
+        "opd": "opd_cases",
+        "ipd": "opd_cases",
+        "vaccination": "vaccinations",
+        "postmortem": "postmortem_records"
+    }
+    
+    if record_type not in collection_map:
+        raise HTTPException(status_code=400, detail="Invalid record type")
+    
+    collection = db[collection_map[record_type]]
+    record = await collection.find_one({"id": record_id})
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    await collection.update_one(
+        {"id": record_id},
+        {"$set": {
+            "is_locked": locked,
+            "lock_reason": reason if locked else None,
+            "locked_by": user["id"] if locked else None,
+            "locked_at": datetime.now(timezone.utc).isoformat() if locked else None
+        }}
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.RECORD_LOCK if locked else AdminActionType.RECORD_UNLOCK,
+        target_type=record_type,
+        target_id=record_id,
+        reason=reason
+    )
+    
+    return {"message": f"Record {'locked' if locked else 'unlocked'} successfully"}
+
+# ============ REPORTS ============
+
+@api_router.get("/admin/reports/user-activity")
+async def get_user_activity_report(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    role: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Generate user activity report"""
+    # This would aggregate data for reporting
+    pipeline = [
+        {"$group": {
+            "_id": "$role",
+            "count": {"$sum": 1},
+            "active_count": {"$sum": {"$cond": ["$is_active", 1, 0]}}
+        }}
+    ]
+    
+    user_stats = await db.users.aggregate(pipeline).to_list(10)
+    
+    return {
+        "report_type": "user_activity",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data": user_stats
+    }
+
+@api_router.get("/admin/reports/disease-surveillance")
+async def get_disease_surveillance_report(
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Generate disease surveillance report"""
+    query = {}
+    if date_from:
+        query["case_date"] = {"$gte": date_from}
+    if date_to:
+        if "case_date" in query:
+            query["case_date"]["$lte"] = date_to
+        else:
+            query["case_date"] = {"$lte": date_to}
+    
+    # Get cases by diagnosis
+    pipeline = [
+        {"$match": query} if query else {"$match": {}},
+        {"$group": {
+            "_id": "$tentative_diagnosis",
+            "count": {"$sum": 1},
+            "villages": {"$addToSet": "$farmer_village"}
+        }},
+        {"$sort": {"count": -1}}
+    ]
+    
+    disease_stats = await db.opd_cases.aggregate(pipeline).to_list(50)
+    
+    return {
+        "report_type": "disease_surveillance",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "data": disease_stats
+    }
+
 # ============ MAIN APP SETUP ============
 
 # Include the router in the main app
