@@ -79,6 +79,17 @@ class InterpretationStatus(str, Enum):
     POSITIVE = "positive"
     NEGATIVE = "negative"
 
+class CaseResult(str, Enum):
+    RECOVERED = "recovered"
+    REFERRED = "referred"
+    DIED = "died"
+    ONGOING = "ongoing"
+    FOLLOWUP = "followup"
+
+class CaseType(str, Enum):
+    OPD = "opd"
+    IPD = "ipd"
+
 # High-risk zoonotic diseases
 HIGH_RISK_DISEASES = [
     "Brucellosis", "Anthrax", "Leptospirosis", "Tuberculosis",
