@@ -1332,6 +1332,234 @@ async def get_ipd_cases(
     cases = await db.opd_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
     return [IPDCaseResponse(**c) for c in cases]
 
+# ============ SURGICAL REGISTER ROUTES ============
+
+async def generate_surgical_case_number():
+    """Generate case number: SURG-YYYY-XXXXX"""
+    year = datetime.now(timezone.utc).year
+    count = await db.surgical_cases.count_documents({
+        "case_number": {"$regex": f"^SURG-{year}-"}
+    })
+    return f"SURG-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/surgical", response_model=SurgicalCaseResponse)
+async def create_surgical_case(case: SurgicalCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    case_dict = case.model_dump()
+    case_dict["id"] = str(uuid.uuid4())
+    case_dict["case_number"] = await generate_surgical_case_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.surgical_cases.count_documents({"case_number": {"$regex": f"^SURG-{year}-"}})
+    case_dict["serial_number"] = count
+    case_dict["vet_id"] = user["id"]
+    case_dict["vet_name"] = user["name"]
+    case_dict["surgery_date"] = datetime.now(timezone.utc).isoformat()
+    case_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    case_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.surgical_cases.insert_one(case_dict)
+    if "_id" in case_dict:
+        del case_dict["_id"]
+    return SurgicalCaseResponse(**case_dict)
+
+@api_router.get("/vet/surgical", response_model=List[SurgicalCaseResponse])
+async def get_surgical_cases(
+    species: Optional[str] = None,
+    surgery_type: Optional[str] = None,
+    outcome: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if surgery_type and surgery_type != "all":
+        query["surgery_type"] = surgery_type
+    if outcome and outcome != "all":
+        query["outcome"] = outcome
+    if date_from:
+        query["surgery_date"] = {"$gte": date_from}
+    if date_to:
+        if "surgery_date" in query:
+            query["surgery_date"]["$lte"] = date_to
+        else:
+            query["surgery_date"] = {"$lte": date_to}
+    
+    cases = await db.surgical_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [SurgicalCaseResponse(**c) for c in cases]
+
+@api_router.get("/vet/surgical/{case_id}", response_model=SurgicalCaseResponse)
+async def get_surgical_case(case_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    case = await db.surgical_cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Surgical case not found")
+    return SurgicalCaseResponse(**case)
+
+@api_router.put("/vet/surgical/{case_id}", response_model=SurgicalCaseResponse)
+async def update_surgical_case(case_id: str, case: SurgicalCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.surgical_cases.find_one({"id": case_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Surgical case not found")
+    
+    update_dict = case.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.surgical_cases.update_one({"id": case_id}, {"$set": update_dict})
+    updated = await db.surgical_cases.find_one({"id": case_id}, {"_id": 0})
+    return SurgicalCaseResponse(**updated)
+
+# ============ GYNAECOLOGY REGISTER ROUTES ============
+
+async def generate_gynaecology_case_number():
+    """Generate case number: GYN-YYYY-XXXXX"""
+    year = datetime.now(timezone.utc).year
+    count = await db.gynaecology_cases.count_documents({
+        "case_number": {"$regex": f"^GYN-{year}-"}
+    })
+    return f"GYN-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/gynaecology", response_model=GynaecologyCaseResponse)
+async def create_gynaecology_case(case: GynaecologyCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    case_dict = case.model_dump()
+    case_dict["id"] = str(uuid.uuid4())
+    case_dict["case_number"] = await generate_gynaecology_case_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.gynaecology_cases.count_documents({"case_number": {"$regex": f"^GYN-{year}-"}})
+    case_dict["serial_number"] = count
+    case_dict["vet_id"] = user["id"]
+    case_dict["vet_name"] = user["name"]
+    case_dict["case_date"] = datetime.now(timezone.utc).isoformat()
+    case_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    case_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.gynaecology_cases.insert_one(case_dict)
+    if "_id" in case_dict:
+        del case_dict["_id"]
+    return GynaecologyCaseResponse(**case_dict)
+
+@api_router.get("/vet/gynaecology", response_model=List[GynaecologyCaseResponse])
+async def get_gynaecology_cases(
+    species: Optional[str] = None,
+    condition: Optional[str] = None,
+    result: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if condition and condition != "all":
+        query["condition"] = condition
+    if result and result != "all":
+        query["result"] = result
+    if date_from:
+        query["case_date"] = {"$gte": date_from}
+    if date_to:
+        if "case_date" in query:
+            query["case_date"]["$lte"] = date_to
+        else:
+            query["case_date"] = {"$lte": date_to}
+    
+    cases = await db.gynaecology_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [GynaecologyCaseResponse(**c) for c in cases]
+
+@api_router.get("/vet/gynaecology/{case_id}", response_model=GynaecologyCaseResponse)
+async def get_gynaecology_case(case_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    case = await db.gynaecology_cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Gynaecology case not found")
+    return GynaecologyCaseResponse(**case)
+
+@api_router.put("/vet/gynaecology/{case_id}", response_model=GynaecologyCaseResponse)
+async def update_gynaecology_case(case_id: str, case: GynaecologyCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.gynaecology_cases.find_one({"id": case_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Gynaecology case not found")
+    
+    update_dict = case.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.gynaecology_cases.update_one({"id": case_id}, {"$set": update_dict})
+    updated = await db.gynaecology_cases.find_one({"id": case_id}, {"_id": 0})
+    return GynaecologyCaseResponse(**updated)
+
+# ============ CASTRATION REGISTER ROUTES ============
+
+async def generate_castration_case_number():
+    """Generate case number: CAST-YYYY-XXXXX"""
+    year = datetime.now(timezone.utc).year
+    count = await db.castration_cases.count_documents({
+        "case_number": {"$regex": f"^CAST-{year}-"}
+    })
+    return f"CAST-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/castration", response_model=CastrationCaseResponse)
+async def create_castration_case(case: CastrationCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    case_dict = case.model_dump()
+    case_dict["id"] = str(uuid.uuid4())
+    case_dict["case_number"] = await generate_castration_case_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.castration_cases.count_documents({"case_number": {"$regex": f"^CAST-{year}-"}})
+    case_dict["serial_number"] = count
+    case_dict["vet_id"] = user["id"]
+    case_dict["vet_name"] = user["name"]
+    case_dict["castration_date"] = datetime.now(timezone.utc).isoformat()
+    case_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    case_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.castration_cases.insert_one(case_dict)
+    if "_id" in case_dict:
+        del case_dict["_id"]
+    return CastrationCaseResponse(**case_dict)
+
+@api_router.get("/vet/castration", response_model=List[CastrationCaseResponse])
+async def get_castration_cases(
+    species: Optional[str] = None,
+    method: Optional[str] = None,
+    outcome: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if method and method != "all":
+        query["method"] = method
+    if outcome and outcome != "all":
+        query["outcome"] = outcome
+    if date_from:
+        query["castration_date"] = {"$gte": date_from}
+    if date_to:
+        if "castration_date" in query:
+            query["castration_date"]["$lte"] = date_to
+        else:
+            query["castration_date"] = {"$lte": date_to}
+    
+    cases = await db.castration_cases.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [CastrationCaseResponse(**c) for c in cases]
+
+@api_router.get("/vet/castration/{case_id}", response_model=CastrationCaseResponse)
+async def get_castration_case(case_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    case = await db.castration_cases.find_one({"id": case_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Castration case not found")
+    return CastrationCaseResponse(**case)
+
+@api_router.put("/vet/castration/{case_id}", response_model=CastrationCaseResponse)
+async def update_castration_case(case_id: str, case: CastrationCaseCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.castration_cases.find_one({"id": case_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Castration case not found")
+    
+    update_dict = case.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.castration_cases.update_one({"id": case_id}, {"$set": update_dict})
+    updated = await db.castration_cases.find_one({"id": case_id}, {"_id": 0})
+    return CastrationCaseResponse(**updated)
+
 # ============ VET DASHBOARD STATS (ENHANCED) ============
 
 @api_router.get("/dashboard/vet-stats-detailed")
