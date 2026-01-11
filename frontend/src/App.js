@@ -246,11 +246,59 @@ function AppRoutes() {
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<PlaceholderPage title="User Management" />} />
+        
+        {/* User Management */}
+        <Route path="users" element={<UserManagement />} />
+        <Route path="users/farmers" element={<UserManagement />} />
+        <Route path="users/paravets" element={<UserManagement />} />
+        <Route path="users/vets" element={<UserManagement />} />
+        <Route path="users/:userId" element={<UserDetail />} />
+        
+        {/* RBAC */}
+        <Route path="rbac" element={<PlaceholderPage title="Role & Permission Control" description="Configure role-based access control" />} />
+        
+        {/* Knowledge Center */}
         <Route path="knowledge" element={<KnowledgeCenter />} />
-        <Route path="safety" element={<PlaceholderPage title="Safety Alerts Config" />} />
-        <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
-        <Route path="settings" element={<PlaceholderPage title="System Settings" />} />
+        <Route path="knowledge/cbc" element={<KnowledgeCenter />} />
+        <Route path="knowledge/biochemistry" element={<KnowledgeCenter />} />
+        <Route path="knowledge/parasitology" element={<KnowledgeCenter />} />
+        <Route path="knowledge/history" element={<PlaceholderPage title="Knowledge Version History" />} />
+        
+        {/* Safety Rules */}
+        <Route path="safety/zoonotic" element={<SafetyRules />} />
+        <Route path="safety/protocols" element={<SafetyRules />} />
+        <Route path="safety/reporting" element={<PlaceholderPage title="Government Reporting" />} />
+        
+        {/* Audit Logs */}
+        <Route path="audit-logs" element={<AuditLogs />} />
+        
+        {/* System Settings */}
+        <Route path="settings/general" element={<PlaceholderPage title="General Settings" />} />
+        <Route path="settings/alerts" element={<PlaceholderPage title="Alert Thresholds" />} />
+        <Route path="settings/notifications" element={<PlaceholderPage title="Notification Rules" />} />
+        
+        {/* Data Locking */}
+        <Route path="data-lock" element={<PlaceholderPage title="Data Locking & Protection" />} />
+        
+        {/* Reports */}
+        <Route path="reports/user-activity" element={<PlaceholderPage title="User Activity Reports" />} />
+        <Route path="reports/disease" element={<PlaceholderPage title="Disease Surveillance Reports" />} />
+        <Route path="reports/vaccination" element={<PlaceholderPage title="Vaccination Coverage Reports" />} />
+        <Route path="reports/export" element={<PlaceholderPage title="Export Data" />} />
+        
+        {/* Notifications */}
+        <Route path="notifications" element={<PlaceholderPage title="System Notifications" />} />
+        
+        {/* Backup */}
+        <Route path="backup" element={<PlaceholderPage title="Backup & Data Integrity" />} />
+        
+        {/* Institutions */}
+        <Route path="institutions" element={<InstitutionManagement />} />
+        
+        {/* Legacy */}
+        <Route path="safety" element={<Navigate to="/admin/safety/zoonotic" replace />} />
+        <Route path="analytics" element={<Navigate to="/admin/reports/user-activity" replace />} />
+        <Route path="settings" element={<Navigate to="/admin/settings/general" replace />} />
       </Route>
 
       {/* Guest Routes */}
