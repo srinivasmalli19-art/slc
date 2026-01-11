@@ -141,7 +141,29 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Backend APIs
 
-### Admin APIs (NEW)
+### Clinical Registers APIs (NEW - January 11, 2026)
+- POST `/api/vet/surgical` - Create surgical case (auto-generates SURG-YYYY-XXXXX)
+- GET `/api/vet/surgical` - List surgical cases (with species/outcome filters)
+- GET `/api/vet/surgical/{id}` - Get surgical case by ID
+- PUT `/api/vet/surgical/{id}` - Update surgical case
+- POST `/api/vet/gynaecology` - Create gynaecology case (auto-generates GYN-YYYY-XXXXX)
+- GET `/api/vet/gynaecology` - List gynaecology cases (with species/condition filters)
+- GET `/api/vet/gynaecology/{id}` - Get gynaecology case by ID
+- PUT `/api/vet/gynaecology/{id}` - Update gynaecology case
+- POST `/api/vet/castration` - Create castration case (auto-generates CAST-YYYY-XXXXX)
+- GET `/api/vet/castration` - List castration cases (with species/method filters)
+- GET `/api/vet/castration/{id}` - Get castration case by ID
+- PUT `/api/vet/castration/{id}` - Update castration case
+
+### GVA APIs (January 11, 2026)
+- POST `/api/gva/calculate` - Calculate and store GVA report
+- GET `/api/gva/reports` - List GVA reports
+- GET `/api/gva/reports/{id}` - Get GVA report by ID
+- GET `/api/gva/reports/{id}/pdf` - Download GVA PDF report
+- GET `/api/gva/settings` - Get GVA settings (Admin only)
+- PUT `/api/gva/settings` - Update GVA settings (Admin only)
+
+### Admin APIs
 - GET `/api/admin/dashboard-stats` - Comprehensive admin statistics
 - GET `/api/admin/alerts` - Admin-specific alerts
 - GET `/api/admin/users` - Get all users with filters (role, status, search)
