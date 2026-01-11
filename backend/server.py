@@ -841,19 +841,8 @@ def generate_diagnostic_pdf_content(diagnostic: dict, animal: dict) -> bytes:
         # Fallback to simple text PDF if reportlab not available
         return b"PDF generation requires reportlab library"
 
-# ============ ADMIN ROUTES ============
-
-@api_router.get("/admin/users", response_model=List[UserResponse])
-async def get_all_users(user: dict = Depends(require_role([UserRole.ADMIN]))):
-    users = await db.users.find({}, {"_id": 0, "password": 0}).to_list(1000)
-    return [UserResponse(**u) for u in users]
-
-@api_router.put("/admin/users/{user_id}/status")
-async def update_user_status(user_id: str, is_active: bool, user: dict = Depends(require_role([UserRole.ADMIN]))):
-    result = await db.users.update_one({"id": user_id}, {"$set": {"is_active": is_active}})
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"message": f"User {'activated' if is_active else 'deactivated'} successfully"}
+# ============ ADMIN ROUTES (Legacy - see enhanced routes below) ============
+# Note: Enhanced admin routes with filters are defined in the ADMIN DASHBOARD section
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(user: dict = Depends(require_role([UserRole.ADMIN]))):
