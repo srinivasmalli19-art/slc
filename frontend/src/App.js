@@ -167,12 +167,70 @@ function AppRoutes() {
       }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<VetDashboard />} />
-        <Route path="registers" element={<PlaceholderPage title="Registers" />} />
-        <Route path="clinical" element={<PlaceholderPage title="Clinical Tools" />} />
+        
+        {/* Profile & Institution */}
+        <Route path="profile" element={<VetProfile />} />
+        <Route path="institution" element={<InstitutionData />} />
+        <Route path="institution-history" element={<PlaceholderPage title="Institution History" description="Historical records of institutions" />} />
+        
+        {/* Farmer & Patient Management */}
+        <Route path="farmers" element={<PlaceholderPage title="Farmer Directory" description="Search and view farmer profiles" />} />
+        <Route path="opd" element={<OPDRegister />} />
+        <Route path="ipd" element={<PlaceholderPage title="IPD Register" description="In-Patient Department records" />} />
+        <Route path="followups" element={<PlaceholderPage title="Follow-up Cases" description="Cases requiring follow-up" />} />
+        
+        {/* Clinical Registers */}
+        <Route path="surgical" element={<PlaceholderPage title="Surgical Case Register" />} />
+        <Route path="gynaecology" element={<PlaceholderPage title="Gynaecology Register" />} />
+        <Route path="castration" element={<PlaceholderPage title="Castration Register" />} />
+        
+        {/* Preventive & Breeding */}
+        <Route path="vaccination-register" element={<PlaceholderPage title="Vaccination Register" />} />
+        <Route path="deworming-register" element={<PlaceholderPage title="Deworming Register" />} />
+        <Route path="ai-register" element={<PlaceholderPage title="AI Register" description="Artificial Insemination records" />} />
+        <Route path="calf-birth" element={<PlaceholderPage title="Calf Birth Register" />} />
+        
+        {/* Disease & Mortality */}
+        <Route path="outbreak" element={<PlaceholderPage title="Outbreak Register" />} />
+        <Route path="mortality" element={<PlaceholderPage title="Mortality Register" />} />
+        
+        {/* Post-Mortem */}
+        <Route path="postmortem" element={<PlaceholderPage title="Post-Mortem Register" />} />
+        <Route path="postmortem-cert" element={<PlaceholderPage title="Post-Mortem Certificate" />} />
+        
+        {/* Specimen & Lab */}
+        <Route path="specimen" element={<PlaceholderPage title="Specimen Register" />} />
+        
+        {/* Diagnostics */}
         <Route path="diagnostics" element={<Diagnostics />} />
         <Route path="diagnostics/new" element={<NewDiagnostic />} />
+        
+        {/* Knowledge Center */}
         <Route path="knowledge" element={<KnowledgeCenter />} />
-        <Route path="reports" element={<PlaceholderPage title="Reports" />} />
+        
+        {/* Certificates */}
+        <Route path="cert-health" element={<PlaceholderPage title="Health Certificate" />} />
+        <Route path="cert-valuation" element={<PlaceholderPage title="Health & Valuation Certificate" />} />
+        
+        {/* Utilities */}
+        <Route path="drug-dose" element={<PlaceholderPage title="Drug Dose Calculator" />} />
+        <Route path="body-weight" element={<PlaceholderPage title="Body Weight Calculator" />} />
+        <Route path="area" element={<PlaceholderPage title="Area Measurement" />} />
+        <Route path="interest" element={<PlaceholderPage title="Interest Calculator" />} />
+        
+        {/* Reports */}
+        <Route path="reports/opd-ipd" element={<PlaceholderPage title="OPD/IPD Reports" />} />
+        <Route path="reports/disease" element={<PlaceholderPage title="Disease-wise Reports" />} />
+        <Route path="reports/vaccination" element={<PlaceholderPage title="Vaccination Reports" />} />
+        
+        {/* Admin & Guidelines */}
+        <Route path="guidelines" element={<PlaceholderPage title="App Guidelines" />} />
+        <Route path="legal" element={<PlaceholderPage title="Legal Disclaimer" />} />
+        
+        {/* Legacy routes */}
+        <Route path="registers" element={<Navigate to="/vet/opd" replace />} />
+        <Route path="clinical" element={<Navigate to="/vet/surgical" replace />} />
+        <Route path="reports" element={<Navigate to="/vet/reports/opd-ipd" replace />} />
       </Route>
 
       {/* Admin Routes */}
