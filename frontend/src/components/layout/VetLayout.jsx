@@ -133,6 +133,7 @@ const VetLayout = () => {
         { label: 'OPD/IPD Reports', path: '/vet/reports/opd-ipd' },
         { label: 'Disease-wise Reports', path: '/vet/reports/disease' },
         { label: 'Vaccination Reports', path: '/vet/reports/vaccination' },
+        { label: 'GVA & Economic Analysis', path: '/vet/reports/gva' },
       ]
     },
     { 
