@@ -80,6 +80,32 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - **Institution Basic Data**: Institution list with verification status
 - **OPD Register**: Yearly auto-numbering (OPD-2026-00001), Clinical details, Zoonotic alerts
 
+### ✅ Veterinarian Section - Batch 2 (Clinical Registers) COMPLETE (January 11, 2026)
+- **Surgical Case Register**: 
+  - Stats cards (Total Surgeries, Successful, Complications, Mortality)
+  - Case list with SURG-YYYY-XXXXX format, surgery type, species, outcome badge
+  - New case dialog with: Tag/ID, Farmer, Species, Surgery Type (13 options), Pre-Op Condition, Anesthesia Type/Details, Surgical Procedure, Findings, Post-Op Care, Outcome, Follow-up Date
+  - Search and filter by species/outcome
+  - View details dialog
+- **Gynaecology Register**:
+  - Stats cards (Total Cases, Recovered, Pregnant, Ongoing)
+  - Case list with GYN-YYYY-XXXXX format, condition, species, result badge
+  - New case dialog with: Tag/ID, Farmer, Species, Parity, Last Calving Date, Breeding History, Condition (13 options), Symptoms, Per-Rectal Findings, Diagnosis, Treatment, Prognosis, Result
+  - Search and filter by species/condition
+  - View details dialog
+- **Castration Register**:
+  - Stats cards (Total Castrations, Successful, Bloodless, Surgical)
+  - Case list with CAST-YYYY-XXXXX format, method, species, outcome badge
+  - New case dialog with: Tag/ID, Farmer, Species, Body Weight, Method (5 options), Anesthesia, Procedure Details, Outcome, Post-Op Care
+  - Search and filter by species/method
+  - View details dialog
+
+### ✅ GVA & Economic Analysis COMPLETE (January 11, 2026)
+- **Input Data Tab**: Livestock Census (Cattle, Buffalo, Sheep, Goat, Poultry), Milk Parameters (Yield, Price), Meat Parameters (Live Weight, Price), Poultry & Egg Parameters, Location Details
+- **Results Tab**: Total Village GVA with breakdown - Milk GVA, Sheep & Goat Meat GVA, Buffalo Meat GVA, Poultry Meat GVA, Egg GVA (showing GSDP, Input Costs, and final GVA for each)
+- **History Tab**: List of previous reports with View and Download buttons
+- **PDF Download**: Working PDF generation with detailed GVA breakdown
+
 ### ✅ Admin Section - Batch 1 COMPLETE (January 11, 2026)
 - **AdminLayout**: Dark sidebar with 12 numbered modules, Governance & Audit Authority theme
 - **Admin Dashboard**:
