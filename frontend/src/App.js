@@ -224,10 +224,12 @@ function AppRoutes() {
         <Route path="area" element={<PlaceholderPage title="Area Measurement" />} />
         <Route path="interest" element={<PlaceholderPage title="Interest Calculator" />} />
         
-        {/* Reports */}
+        {/* Reports & GVA */}
         <Route path="reports/opd-ipd" element={<PlaceholderPage title="OPD/IPD Reports" />} />
         <Route path="reports/disease" element={<PlaceholderPage title="Disease-wise Reports" />} />
         <Route path="reports/vaccination" element={<PlaceholderPage title="Vaccination Reports" />} />
+        <Route path="reports/gva" element={<GVAAnalysis />} />
+        <Route path="gva" element={<GVAAnalysis />} />
         
         {/* Admin & Guidelines */}
         <Route path="guidelines" element={<PlaceholderPage title="App Guidelines" />} />
