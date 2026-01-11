@@ -231,7 +231,7 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Test Credentials
 - Farmer: 9876543210 / test123
-- Veterinarian: 9876543211 / vet123
+- Veterinarian: 9111222333 / test123 (updated)
 - Admin: 9876543212 / admin123
 - Guest: No registration required
 
@@ -243,8 +243,9 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Testing Status
 - **Farmer Tests**: 33/33 passed (100%) - `/app/test_reports/iteration_2.json`
-- **Vet Tests**: 17/17 passed (100%) - `/app/test_reports/iteration_3.json`
+- **Vet Tests Phase 1**: 17/17 passed (100%) - `/app/test_reports/iteration_3.json`
 - **Admin Tests**: 21/21 backend + all frontend passed (100%) - `/app/test_reports/iteration_4.json`
+- **Vet Batch 2 (Clinical Registers + GVA)**: 21/21 backend passed, all frontend verified - `/app/test_reports/iteration_5.json`
 
 ## High-Risk Zoonotic Diseases (Safety Engine)
 1. Brucellosis
