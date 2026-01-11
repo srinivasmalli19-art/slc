@@ -957,6 +957,162 @@ class IPDCaseResponse(IPDCaseBase):
     created_at: str
     updated_at: str
 
+# ============ CLINICAL REGISTERS MODELS ============
+
+class SurgeryType(str, Enum):
+    CAESAREAN = "caesarean"
+    RUMENOTOMY = "rumenotomy"
+    HERNIA = "hernia"
+    CASTRATION_SURGICAL = "castration_surgical"
+    TUMOR_REMOVAL = "tumor_removal"
+    DEHORNING = "dehorning"
+    TAIL_DOCKING = "tail_docking"
+    WOUND_SUTURING = "wound_suturing"
+    ABSCESS_DRAINAGE = "abscess_drainage"
+    FRACTURE_REPAIR = "fracture_repair"
+    TEAT_SURGERY = "teat_surgery"
+    EYE_SURGERY = "eye_surgery"
+    OTHER = "other"
+
+class AnesthesiaType(str, Enum):
+    LOCAL = "local"
+    REGIONAL = "regional"
+    EPIDURAL = "epidural"
+    GENERAL = "general"
+    SEDATION = "sedation"
+    NONE = "none"
+
+class SurgeryOutcome(str, Enum):
+    SUCCESSFUL = "successful"
+    PARTIAL_SUCCESS = "partial_success"
+    COMPLICATIONS = "complications"
+    FAILED = "failed"
+    DIED_DURING = "died_during"
+    DIED_POST_OP = "died_post_op"
+
+class SurgicalCaseBase(BaseModel):
+    tag_number: str
+    farmer_name: str
+    farmer_village: Optional[str] = None
+    farmer_phone: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    surgery_type: str
+    surgery_type_other: Optional[str] = None
+    pre_op_condition: str
+    anesthesia_type: str
+    anesthesia_details: Optional[str] = None
+    surgical_procedure: str
+    findings: Optional[str] = None
+    post_op_care: Optional[str] = None
+    outcome: str = "successful"
+    complications: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    remarks: Optional[str] = None
+
+class SurgicalCaseCreate(SurgicalCaseBase):
+    pass
+
+class SurgicalCaseResponse(SurgicalCaseBase):
+    id: str
+    case_number: str
+    serial_number: int
+    vet_id: str
+    vet_name: str
+    surgery_date: str
+    created_at: str
+    updated_at: str
+
+class GynaecologyCondition(str, Enum):
+    REPEAT_BREEDER = "repeat_breeder"
+    ANOESTRUS = "anoestrus"
+    METRITIS = "metritis"
+    PYOMETRA = "pyometra"
+    RETAINED_PLACENTA = "retained_placenta"
+    DYSTOCIA = "dystocia"
+    PROLAPSE_UTERUS = "prolapse_uterus"
+    PROLAPSE_VAGINA = "prolapse_vagina"
+    OVARIAN_CYST = "ovarian_cyst"
+    MASTITIS = "mastitis"
+    PREGNANCY_DIAGNOSIS = "pregnancy_diagnosis"
+    ABORTION = "abortion"
+    OTHER = "other"
+
+class GynaecologyCaseBase(BaseModel):
+    tag_number: str
+    farmer_name: str
+    farmer_village: Optional[str] = None
+    farmer_phone: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    parity: Optional[int] = None
+    last_calving_date: Optional[str] = None
+    breeding_history: Optional[str] = None
+    condition: str
+    condition_other: Optional[str] = None
+    symptoms: str
+    per_rectal_findings: Optional[str] = None
+    diagnosis: str
+    treatment: str
+    prognosis: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    result: str = "ongoing"
+    remarks: Optional[str] = None
+
+class GynaecologyCaseCreate(GynaecologyCaseBase):
+    pass
+
+class GynaecologyCaseResponse(GynaecologyCaseBase):
+    id: str
+    case_number: str
+    serial_number: int
+    vet_id: str
+    vet_name: str
+    case_date: str
+    created_at: str
+    updated_at: str
+
+class CastrationMethod(str, Enum):
+    SURGICAL_OPEN = "surgical_open"
+    SURGICAL_CLOSED = "surgical_closed"
+    BURDIZZO = "burdizzo"
+    RUBBER_RING = "rubber_ring"
+    CHEMICAL = "chemical"
+
+class CastrationCaseBase(BaseModel):
+    tag_number: str
+    farmer_name: str
+    farmer_village: Optional[str] = None
+    farmer_phone: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    body_weight_kg: Optional[float] = None
+    method: str
+    anesthesia_used: str = "local"
+    anesthesia_details: Optional[str] = None
+    procedure_details: Optional[str] = None
+    outcome: str = "successful"
+    complications: Optional[str] = None
+    post_op_care: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    remarks: Optional[str] = None
+
+class CastrationCaseCreate(CastrationCaseBase):
+    pass
+
+class CastrationCaseResponse(CastrationCaseBase):
+    id: str
+    case_number: str
+    serial_number: int
+    vet_id: str
+    vet_name: str
+    castration_date: str
+    created_at: str
+    updated_at: str
+
 # ============ VET PROFILE & INSTITUTION ROUTES ============
 
 async def generate_vet_id():
