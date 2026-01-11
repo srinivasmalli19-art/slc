@@ -36,6 +36,7 @@ import OPDRegister from '@/components/pages/vet/OPDRegister';
 import Diagnostics from '@/components/pages/vet/Diagnostics';
 import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
 import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
+import GVAAnalysis from '@/components/pages/vet/GVAAnalysis';
 
 // Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
