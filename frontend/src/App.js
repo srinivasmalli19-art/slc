@@ -37,6 +37,9 @@ import Diagnostics from '@/components/pages/vet/Diagnostics';
 import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
 import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
 import GVAAnalysis from '@/components/pages/vet/GVAAnalysis';
+import SurgicalRegister from '@/components/pages/vet/SurgicalRegister';
+import GynaecologyRegister from '@/components/pages/vet/GynaecologyRegister';
+import CastrationRegister from '@/components/pages/vet/CastrationRegister';
 
 // Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
