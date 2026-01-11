@@ -189,9 +189,9 @@ function AppRoutes() {
         <Route path="followups" element={<PlaceholderPage title="Follow-up Cases" description="Cases requiring follow-up" />} />
         
         {/* Clinical Registers */}
-        <Route path="surgical" element={<PlaceholderPage title="Surgical Case Register" />} />
-        <Route path="gynaecology" element={<PlaceholderPage title="Gynaecology Register" />} />
-        <Route path="castration" element={<PlaceholderPage title="Castration Register" />} />
+        <Route path="surgical" element={<SurgicalRegister />} />
+        <Route path="gynaecology" element={<GynaecologyRegister />} />
+        <Route path="castration" element={<CastrationRegister />} />
         
         {/* Preventive & Breeding */}
         <Route path="vaccination-register" element={<PlaceholderPage title="Vaccination Register" />} />
