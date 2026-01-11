@@ -32,8 +32,8 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - Access Knowledge Center (READ-ONLY)
 - Final responsibility always with vet
 
-### 4. Admin/Department
-- Manage users
+### 4. Admin/Department (Governance Authority)
+- Manage users (activate/deactivate/lock)
 - Control permissions
 - Edit Knowledge Center backend logic
 - Configure safety alerts
@@ -75,92 +75,111 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ### ✅ Veterinarian Section - Phase 1 COMPLETE (January 11, 2026)
 - **VetLayout**: Enhanced sidebar with 14 numbered modules and collapsible submenus
-- **Vet Dashboard**:
-  - Summary cards (OPD Today, IPD Active, Vaccinations, AI Cases, Mortality)
-  - Alerts Panel with zoonotic disease warnings and profile completion alerts
-  - Quick Actions (New OPD Case, Diagnostics, Registers, Certificates, Knowledge Center, Reports)
-  - Overall Statistics (Total OPD, Total IPD, Animals Registered, Pending Follow-ups)
-  - Zoonotic Safety Reminder banner
-- **Vet Profile Register**:
-  - Registration Details (Registration Number - locked once saved, Qualification, Mobile, Date of Joining)
-  - Institution & Location (Institution Name, Village, Mandal, District, State)
-  - Profile completion status badge (VET-YYYY-XXXXX format)
-- **Institution Basic Data**:
+- **Vet Dashboard**: Summary cards, Alerts Panel, Quick Actions, Zoonotic Safety Reminder
+- **Vet Profile Register**: Registration details (locked once saved), Institution & Location
+- **Institution Basic Data**: Institution list with verification status
+- **OPD Register**: Yearly auto-numbering (OPD-2026-00001), Clinical details, Zoonotic alerts
+
+### ✅ Admin Section - Batch 1 COMPLETE (January 11, 2026)
+- **AdminLayout**: Dark sidebar with 12 numbered modules, Governance & Audit Authority theme
+- **Admin Dashboard**:
+  - Summary cards (Total Farmers/Paravets/Vets/Animals/Institutions)
+  - Pending Approvals cards (User Approvals, Institution Verifications, Knowledge Entries)
+  - Quick Actions (User Management, Knowledge Center, Safety Rules, Audit Logs, Settings, Reports)
+  - Alerts Panel (Institution Verification Pending, Zoonotic Disease Outbreak)
+  - Governance Mode banner explaining admin restrictions
+- **User Management**:
+  - Stats cards (Total Users, Active, Inactive, Locked)
+  - Role tabs (All, Farmers, Paravets, Vets, Admins)
+  - Search and status filter
+  - User table with role badges, status badges, actions
+  - User Detail page with activate/deactivate/lock/unlock actions
+  - Vet-specific actions (verify registration, enable/disable certificates)
+  - Audit Notice footer
+- **Audit Logs**:
+  - Immutable Audit Trail banner
+  - Export CSV functionality
+  - Filters (Action Type, Target Type, Date Range)
+  - Log entries with action badges, before/after values
+  - Detail dialog with full audit information
+- **Safety Rules**:
+  - Pre-configured High-Risk Diseases (Brucellosis, Anthrax, Leptospirosis, Tuberculosis, Avian Influenza, Rabies, FMD)
+  - Create/Edit safety rules with: PPE Instructions, Isolation Protocols, Milk/Meat Restrictions, Disposal Procedures, Government Reporting
+  - Species-affected multi-select
+  - Version control and audit logging
+- **Institution Management**:
+  - Stats cards (Total, Verified, Pending)
   - Institution list with verification status
-  - Add Institution dialog with all required fields
-  - Jurisdiction villages multi-select
-  - Admin verification lock note
-- **OPD Register**:
-  - Case list with yearly auto-numbering (OPD-2026-00001)
-  - Serial numbers
-  - Patient & Farmer details (Tag, Species, Owner, Village, Phone, Age)
-  - Clinical details (Symptoms, Tentative Diagnosis, Treatment)
-  - Result tracking (Ongoing, Recovered, Referred, Follow-up, Died)
-  - Zoonotic disease warning for high-risk diagnoses
-  - Search and filter (by species, result)
-- **Knowledge Center**: Reference database (existing)
-- **Diagnostics**: Auto-interpretation (existing)
+  - Verify/Revoke verification with remarks
+  - Jurisdiction villages display
 
 ## Backend APIs
 
-### Vet Profile & Institution
-- POST `/api/vet/profile` - Create vet profile
-- GET `/api/vet/profile` - Get vet profile
-- PUT `/api/vet/profile` - Update vet profile (registration number locked)
-- POST `/api/vet/institution` - Create institution
-- GET `/api/vet/institutions` - Get institutions list
-- GET `/api/vet/institution/{id}` - Get institution by ID
-
-### OPD/IPD
-- POST `/api/vet/opd` - Create OPD case
-- GET `/api/vet/opd` - Get OPD cases with filters
-- GET `/api/vet/opd/{id}` - Get single OPD case
-- PUT `/api/vet/opd/{id}` - Update OPD case
-- POST `/api/vet/ipd` - Create IPD case
-- GET `/api/vet/ipd` - Get IPD cases
-
-### Dashboard & Alerts
-- GET `/api/dashboard/vet-stats-detailed` - Enhanced vet statistics
-- GET `/api/vet/alerts` - Vet alerts (follow-ups, profile, zoonotic)
+### Admin APIs (NEW)
+- GET `/api/admin/dashboard-stats` - Comprehensive admin statistics
+- GET `/api/admin/alerts` - Admin-specific alerts
+- GET `/api/admin/users` - Get all users with filters (role, status, search)
+- GET `/api/admin/users/{id}` - Get user detail with activity
+- PUT `/api/admin/users/{id}/status` - Activate/deactivate user
+- PUT `/api/admin/users/{id}/lock` - Lock/unlock user account
+- GET `/api/admin/users/{id}/activity` - Get user activity log
+- PUT `/api/admin/vets/{id}/verify-registration` - Verify vet registration
+- PUT `/api/admin/vets/{id}/certificate-privileges` - Enable/disable certificates
+- PUT `/api/admin/institutions/{id}/verify` - Verify institution
+- POST `/api/admin/knowledge` - Create knowledge entry
+- GET `/api/admin/knowledge` - Get knowledge entries
+- PUT `/api/admin/knowledge/{id}` - Update knowledge entry (versioned)
+- PUT `/api/admin/knowledge/{id}/publish` - Publish knowledge entry
+- PUT `/api/admin/knowledge/{id}/archive` - Archive knowledge entry
+- POST `/api/admin/safety-rules` - Create safety rule
+- GET `/api/admin/safety-rules` - Get all safety rules
+- PUT `/api/admin/safety-rules/{id}` - Update safety rule (versioned)
+- GET `/api/admin/audit-logs` - Get audit logs with filters
+- POST `/api/admin/notifications` - Create system notification
+- GET `/api/admin/notifications` - Get admin notifications
+- GET `/api/admin/settings` - Get system settings
+- PUT `/api/admin/settings/{key}` - Update system setting
+- PUT `/api/admin/records/{type}/{id}/lock` - Lock/unlock records
+- GET `/api/admin/reports/user-activity` - User activity report
+- GET `/api/admin/reports/disease-surveillance` - Disease surveillance report
 
 ## Prioritized Backlog
 
-### P1 - High Priority (Next)
-- [ ] **IPD Register** - Full implementation with admission/discharge
-- [ ] **Vaccination Register** - Large Animals & Small Animals/Flock
-- [ ] **AI Register** - With PD result and calf birth linkage
+### P1 - High Priority (Next - Batch 2)
+- [ ] **IPD Register** - Admission/discharge tracking with bed numbers
 - [ ] **Surgical Case Register** - Surgery types, anesthesia, outcomes
-- [ ] **Certificates** - Health Certificate, Health & Valuation Certificate
+- [ ] **Gynaecology Register** - Symptoms, diagnosis, treatment
+- [ ] **Castration Register** - Species, method, results
+- [ ] **Vaccination Registers** - Large/Small Animals with species-specific vaccines
 
-### P2 - Medium Priority
-- [ ] Expand Ration Calculator for Cattle, Sheep, Goat, Pig
-- [ ] Implement Milk Records module
-- [ ] Clinical Registers (Gynaecology, Castration)
-- [ ] Disease & Mortality (Outbreak Register, Mortality Register)
-- [ ] Post-Mortem Register and Certificate
+### P2 - GVA & Analytics (Batch 3 - Critical)
+- [ ] **GVA Calculation Engine** - Milk, Meat, Egg calculations (admin-configurable percentages)
+- [ ] **Village GVA Report** - Combined report with PDF download
+- [ ] **Stock Registers** - Biological, Medicine, Feed with batch/expiry tracking
+- [ ] **Distribution Registers** - Feed/Seed with auto stock deduction
 
-### P3 - Paravet Section
+### P3 - Legal & Compliance (Batch 4)
+- [ ] **Post-Mortem Register & Certificate** - Step-wise form with PDF
+- [ ] **Health Certificate Generator** - Auto-filled with PDF output
+- [ ] **Admin & Guidelines** - Read-only legal content with acceptance flow
+- [ ] **My Paravets** - Paravet request approval workflow
+
+### P4 - Paravet Section
 - [ ] Paravet Dashboard
-- [ ] Paravet-specific registers (subset of Vet modules)
+- [ ] Paravet-specific registers
 - [ ] "Raise Request" workflow to Vet
 
-### P4 - Admin Section
-- [ ] Master Admin Dashboard with RBAC
-- [ ] User Management (Farmer/Paravet/Vet)
-- [ ] Knowledge Center Editor
-- [ ] Audit Logs & Compliance
-
 ### P5 - Future/Backlog
+- [ ] RBAC Permission Matrix UI
+- [ ] System Notifications Management
+- [ ] Backup & Data Integrity
 - [ ] PDF Report Generation
 - [ ] Offline PWA support
-- [ ] Multi-language support
-- [ ] Stock Management registers
-- [ ] GVA Analytics
 
 ## Test Credentials
 - Farmer: 9876543210 / test123
 - Veterinarian: 9876543211 / vet123
-- Admin: To be created
+- Admin: 9876543212 / admin123
 - Guest: No registration required
 
 ## Tech Stack
@@ -171,7 +190,8 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Testing Status
 - **Farmer Tests**: 33/33 passed (100%) - `/app/test_reports/iteration_2.json`
-- **Vet Tests**: 17/17 backend + all frontend passed (100%) - `/app/test_reports/iteration_3.json`
+- **Vet Tests**: 17/17 passed (100%) - `/app/test_reports/iteration_3.json`
+- **Admin Tests**: 21/21 backend + all frontend passed (100%) - `/app/test_reports/iteration_4.json`
 
 ## High-Risk Zoonotic Diseases (Safety Engine)
 1. Brucellosis
@@ -184,3 +204,6 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Global Disclaimer
 "This system provides clinical reference and decision support only. Final diagnosis and treatment decisions must be made by a registered veterinarian."
+
+## Admin Governance Principle
+"Admin actions govern and control all Paravet, Veterinarian, and Farmer system operations. All actions are logged for compliance."
