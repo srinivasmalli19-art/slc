@@ -2299,6 +2299,439 @@ async def get_disease_surveillance_report(
         "data": disease_stats
     }
 
+# ============ GVA & ECONOMIC ANALYSIS MODULE ============
+
+# Default GVA calculation parameters (admin-configurable)
+DEFAULT_GVA_SETTINGS = {
+    "milk": {
+        "breedable_percentage": 70,  # % of cattle+buffalo that are breedable
+        "in_milk_percentage": 60,    # % of breedable that are in-milk
+        "input_cost_percentage": 40   # % of GSDP as input cost
+    },
+    "sheep_goat": {
+        "slaughter_rate": 45,        # % slaughtered
+        "seasons_per_year": 3,       # number of seasons
+        "input_cost_percentage": 20   # % of GSDP as input cost
+    },
+    "buffalo_meat": {
+        "slaughter_rate": 25,        # % slaughtered
+        "input_cost_percentage": 15   # % of GSDP as input cost
+    },
+    "poultry_meat": {
+        "batches_per_year": 8,       # batches per year
+        "slaughter_rate": 95,        # % slaughtered
+        "dressing_percentage": 70,    # dressing %
+        "input_cost_percentage": 45   # % of GSDP as input cost
+    },
+    "egg": {
+        "input_cost_percentage": 40   # % of GSDP as input cost
+    }
+}
+
+class GVAInputBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    # Livestock Census
+    cattle_count: int = 0
+    buffalo_count: int = 0
+    sheep_count: int = 0
+    goat_count: int = 0
+    poultry_count: int = 0
+    # Milk Parameters
+    avg_milk_yield_per_day: float = 0  # litres per animal per day
+    milk_price_per_litre: float = 0     # ₹
+    # Meat Parameters
+    avg_live_weight_kg: float = 0       # kg at slaughter
+    meat_price_per_kg: float = 0        # ₹
+    # Poultry & Egg Parameters
+    eggs_per_bird_per_year: int = 0
+    egg_price: float = 0                # ₹ per egg
+    poultry_meat_price_per_kg: float = 0  # ₹
+    # Location
+    village_name: Optional[str] = None
+    mandal: Optional[str] = None
+    district: Optional[str] = None
+
+class GVACalculationResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    # Milk GVA
+    milk_breedable_animals: int = 0
+    milk_in_milk_animals: int = 0
+    milk_daily_production: float = 0
+    milk_annual_production: float = 0
+    milk_gsdp: float = 0
+    milk_input_cost: float = 0
+    milk_gva: float = 0
+    # Sheep & Goat Meat GVA
+    sheep_goat_slaughter_count: int = 0
+    sheep_goat_meat_production: float = 0
+    sheep_goat_annual_meat: float = 0
+    sheep_goat_gsdp: float = 0
+    sheep_goat_input_cost: float = 0
+    sheep_goat_gva: float = 0
+    # Buffalo Meat GVA
+    buffalo_slaughter_count: int = 0
+    buffalo_meat_production: float = 0
+    buffalo_gsdp: float = 0
+    buffalo_input_cost: float = 0
+    buffalo_meat_gva: float = 0
+    # Poultry Meat GVA
+    poultry_annual_birds: int = 0
+    poultry_slaughter_count: int = 0
+    poultry_dressed_meat: float = 0
+    poultry_gsdp: float = 0
+    poultry_input_cost: float = 0
+    poultry_meat_gva: float = 0
+    # Egg GVA
+    egg_annual_production: int = 0
+    egg_gsdp: float = 0
+    egg_input_cost: float = 0
+    egg_gva: float = 0
+    # Total
+    total_village_gva: float = 0
+
+class GVAReportResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    inputs: GVAInputBase
+    results: GVACalculationResult
+    settings_used: Dict[str, Any]
+    vet_id: str
+    vet_name: str
+    institution: Optional[str] = None
+    created_at: str
+
+@api_router.get("/gva/settings")
+async def get_gva_settings(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Get GVA calculation settings (admin only)"""
+    settings = await db.gva_settings.find_one({"type": "gva_parameters"}, {"_id": 0})
+    if not settings:
+        # Return defaults if not configured
+        return DEFAULT_GVA_SETTINGS
+    return settings.get("parameters", DEFAULT_GVA_SETTINGS)
+
+@api_router.put("/gva/settings")
+async def update_gva_settings(
+    settings: Dict[str, Any],
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update GVA calculation settings (admin only)"""
+    await db.gva_settings.update_one(
+        {"type": "gva_parameters"},
+        {"$set": {
+            "parameters": settings,
+            "updated_by": user["id"],
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    # Log the action
+    await log_admin_action(
+        admin_id=user["id"],
+        admin_name=user["name"],
+        action_type=AdminActionType.SETTING_UPDATE,
+        target_type="gva_settings",
+        target_id="gva_parameters",
+        after_value=settings
+    )
+    
+    return {"message": "GVA settings updated successfully"}
+
+def calculate_gva(inputs: GVAInputBase, settings: Dict[str, Any]) -> GVACalculationResult:
+    """Core GVA calculation engine - all formulas implemented here"""
+    result = GVACalculationResult()
+    
+    milk_settings = settings.get("milk", DEFAULT_GVA_SETTINGS["milk"])
+    sheep_goat_settings = settings.get("sheep_goat", DEFAULT_GVA_SETTINGS["sheep_goat"])
+    buffalo_settings = settings.get("buffalo_meat", DEFAULT_GVA_SETTINGS["buffalo_meat"])
+    poultry_settings = settings.get("poultry_meat", DEFAULT_GVA_SETTINGS["poultry_meat"])
+    egg_settings = settings.get("egg", DEFAULT_GVA_SETTINGS["egg"])
+    
+    # ====== MILK GVA ======
+    total_dairy = inputs.cattle_count + inputs.buffalo_count
+    result.milk_breedable_animals = int(total_dairy * milk_settings["breedable_percentage"] / 100)
+    result.milk_in_milk_animals = int(result.milk_breedable_animals * milk_settings["in_milk_percentage"] / 100)
+    result.milk_daily_production = result.milk_in_milk_animals * inputs.avg_milk_yield_per_day
+    result.milk_annual_production = result.milk_daily_production * 365
+    result.milk_gsdp = result.milk_annual_production * inputs.milk_price_per_litre
+    result.milk_input_cost = result.milk_gsdp * milk_settings["input_cost_percentage"] / 100
+    result.milk_gva = result.milk_gsdp - result.milk_input_cost
+    
+    # ====== SHEEP & GOAT MEAT GVA ======
+    total_sheep_goat = inputs.sheep_count + inputs.goat_count
+    result.sheep_goat_slaughter_count = int(total_sheep_goat * sheep_goat_settings["slaughter_rate"] / 100)
+    result.sheep_goat_meat_production = result.sheep_goat_slaughter_count * inputs.avg_live_weight_kg
+    result.sheep_goat_annual_meat = result.sheep_goat_meat_production * sheep_goat_settings["seasons_per_year"]
+    result.sheep_goat_gsdp = result.sheep_goat_annual_meat * inputs.meat_price_per_kg
+    result.sheep_goat_input_cost = result.sheep_goat_gsdp * sheep_goat_settings["input_cost_percentage"] / 100
+    result.sheep_goat_gva = result.sheep_goat_gsdp - result.sheep_goat_input_cost
+    
+    # ====== BUFFALO MEAT GVA ======
+    result.buffalo_slaughter_count = int(inputs.buffalo_count * buffalo_settings["slaughter_rate"] / 100)
+    result.buffalo_meat_production = result.buffalo_slaughter_count * inputs.avg_live_weight_kg
+    result.buffalo_gsdp = result.buffalo_meat_production * inputs.meat_price_per_kg
+    result.buffalo_input_cost = result.buffalo_gsdp * buffalo_settings["input_cost_percentage"] / 100
+    result.buffalo_meat_gva = result.buffalo_gsdp - result.buffalo_input_cost
+    
+    # ====== POULTRY MEAT GVA ======
+    result.poultry_annual_birds = inputs.poultry_count * poultry_settings["batches_per_year"]
+    result.poultry_slaughter_count = int(result.poultry_annual_birds * poultry_settings["slaughter_rate"] / 100)
+    result.poultry_dressed_meat = result.poultry_slaughter_count * poultry_settings["dressing_percentage"] / 100
+    result.poultry_gsdp = result.poultry_dressed_meat * inputs.poultry_meat_price_per_kg
+    result.poultry_input_cost = result.poultry_gsdp * poultry_settings["input_cost_percentage"] / 100
+    result.poultry_meat_gva = result.poultry_gsdp - result.poultry_input_cost
+    
+    # ====== EGG GVA ======
+    result.egg_annual_production = inputs.poultry_count * inputs.eggs_per_bird_per_year
+    result.egg_gsdp = result.egg_annual_production * inputs.egg_price
+    result.egg_input_cost = result.egg_gsdp * egg_settings["input_cost_percentage"] / 100
+    result.egg_gva = result.egg_gsdp - result.egg_input_cost
+    
+    # ====== TOTAL VILLAGE GVA ======
+    result.total_village_gva = (
+        result.milk_gva +
+        result.sheep_goat_gva +
+        result.buffalo_meat_gva +
+        result.poultry_meat_gva +
+        result.egg_gva
+    )
+    
+    return result
+
+@api_router.post("/gva/calculate")
+async def calculate_gva_report(
+    inputs: GVAInputBase,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    """Calculate GVA and save report"""
+    # Get current settings
+    settings_doc = await db.gva_settings.find_one({"type": "gva_parameters"}, {"_id": 0})
+    settings = settings_doc.get("parameters", DEFAULT_GVA_SETTINGS) if settings_doc else DEFAULT_GVA_SETTINGS
+    
+    # Calculate GVA
+    results = calculate_gva(inputs, settings)
+    
+    # Get vet profile for institution
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    institution = vet_profile.get("institution_name") if vet_profile else None
+    
+    # Save report
+    report = {
+        "id": str(uuid.uuid4()),
+        "inputs": inputs.model_dump(),
+        "results": results.model_dump(),
+        "settings_used": settings,
+        "vet_id": user["id"],
+        "vet_name": user["name"],
+        "institution": institution,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.gva_reports.insert_one(report)
+    if "_id" in report:
+        del report["_id"]
+    
+    return report
+
+@api_router.get("/gva/reports")
+async def get_gva_reports(
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN, UserRole.PARAVET]))
+):
+    """Get GVA reports history"""
+    query = {}
+    if user["role"] == "veterinarian":
+        query["vet_id"] = user["id"]
+    elif user["role"] == "paravet":
+        # Paravets can only view, not create
+        pass
+    
+    reports = await db.gva_reports.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return reports
+
+@api_router.get("/gva/reports/{report_id}")
+async def get_gva_report(
+    report_id: str,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN, UserRole.PARAVET]))
+):
+    """Get specific GVA report"""
+    report = await db.gva_reports.find_one({"id": report_id}, {"_id": 0})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report
+
+@api_router.get("/gva/reports/{report_id}/pdf")
+async def generate_gva_pdf(
+    report_id: str,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    """Generate PDF for GVA report"""
+    report = await db.gva_reports.find_one({"id": report_id}, {"_id": 0})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.units import inch
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            alignment=1,
+            spaceAfter=12
+        )
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Normal'],
+            fontSize=12,
+            alignment=1,
+            spaceAfter=20
+        )
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Heading2'],
+            fontSize=12,
+            spaceBefore=15,
+            spaceAfter=8
+        )
+        
+        elements = []
+        
+        # Title
+        elements.append(Paragraph("SMART LIVESTOCK CARE (SLC)", title_style))
+        elements.append(Paragraph("Village GVA Economic Report", subtitle_style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Report Info
+        inputs = report.get("inputs", {})
+        info_data = [
+            ["Report Date:", report.get("created_at", "")[:10]],
+            ["Village:", inputs.get("village_name", "N/A")],
+            ["Mandal:", inputs.get("mandal", "N/A")],
+            ["District:", inputs.get("district", "N/A")],
+            ["Vet Name:", report.get("vet_name", "N/A")],
+            ["Institution:", report.get("institution", "N/A")],
+        ]
+        info_table = Table(info_data, colWidths=[1.5*inch, 3*inch])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        elements.append(info_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Livestock Census
+        elements.append(Paragraph("LIVESTOCK CENSUS", section_style))
+        census_data = [
+            ["Species", "Count"],
+            ["Cattle", str(inputs.get("cattle_count", 0))],
+            ["Buffalo", str(inputs.get("buffalo_count", 0))],
+            ["Sheep", str(inputs.get("sheep_count", 0))],
+            ["Goat", str(inputs.get("goat_count", 0))],
+            ["Poultry", str(inputs.get("poultry_count", 0))],
+        ]
+        census_table = Table(census_data, colWidths=[2*inch, 1.5*inch])
+        census_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e40af')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(census_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # GVA Results
+        results = report.get("results", {})
+        elements.append(Paragraph("GVA CALCULATION RESULTS", section_style))
+        
+        def format_currency(value):
+            return f"₹ {value:,.2f}"
+        
+        gva_data = [
+            ["Category", "GSDP (₹)", "Input Cost (₹)", "GVA (₹)"],
+            ["Milk", format_currency(results.get("milk_gsdp", 0)), format_currency(results.get("milk_input_cost", 0)), format_currency(results.get("milk_gva", 0))],
+            ["Sheep & Goat Meat", format_currency(results.get("sheep_goat_gsdp", 0)), format_currency(results.get("sheep_goat_input_cost", 0)), format_currency(results.get("sheep_goat_gva", 0))],
+            ["Buffalo Meat", format_currency(results.get("buffalo_gsdp", 0)), format_currency(results.get("buffalo_input_cost", 0)), format_currency(results.get("buffalo_meat_gva", 0))],
+            ["Poultry Meat", format_currency(results.get("poultry_gsdp", 0)), format_currency(results.get("poultry_input_cost", 0)), format_currency(results.get("poultry_meat_gva", 0))],
+            ["Eggs", format_currency(results.get("egg_gsdp", 0)), format_currency(results.get("egg_input_cost", 0)), format_currency(results.get("egg_gva", 0))],
+        ]
+        gva_table = Table(gva_data, colWidths=[1.8*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        gva_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#059669')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(gva_table)
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Total GVA
+        total_data = [
+            ["TOTAL VILLAGE GVA", format_currency(results.get("total_village_gva", 0))],
+        ]
+        total_table = Table(total_data, colWidths=[4.3*inch, 2*inch])
+        total_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#dc2626')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        elements.append(total_table)
+        elements.append(Spacer(1, 0.4*inch))
+        
+        # Disclaimer
+        disclaimer_style = ParagraphStyle(
+            'Disclaimer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=1
+        )
+        elements.append(Paragraph(
+            "DISCLAIMER: These calculations are planning estimates only. "
+            "Final economic decisions depend on local conditions. "
+            "This report is generated by Smart Livestock Care (SLC) for reference purposes.",
+            disclaimer_style
+        ))
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=GVA_Report_{report_id[:8]}.pdf"
+            }
+        )
+        
+    except ImportError:
+        # Fallback if reportlab not available
+        return {"error": "PDF generation requires reportlab library", "report": report}
+
 # ============ MAIN APP SETUP ============
 
 # Include the router in the main app
