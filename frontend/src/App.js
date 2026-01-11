@@ -30,6 +30,9 @@ import RationCalculator from '@/components/pages/farmer/RationCalculator';
 
 // Pages - Vet
 import VetDashboard from '@/components/pages/vet/VetDashboard';
+import VetProfile from '@/components/pages/vet/VetProfile';
+import InstitutionData from '@/components/pages/vet/InstitutionData';
+import OPDRegister from '@/components/pages/vet/OPDRegister';
 import Diagnostics from '@/components/pages/vet/Diagnostics';
 import NewDiagnostic from '@/components/pages/vet/NewDiagnostic';
 import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
