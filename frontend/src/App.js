@@ -39,6 +39,11 @@ import KnowledgeCenter from '@/components/pages/vet/KnowledgeCenter';
 
 // Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
+import UserManagement from '@/components/pages/admin/UserManagement';
+import UserDetail from '@/components/pages/admin/UserDetail';
+import AuditLogs from '@/components/pages/admin/AuditLogs';
+import SafetyRules from '@/components/pages/admin/SafetyRules';
+import InstitutionManagement from '@/components/pages/admin/InstitutionManagement';
 
 // Pages - Guest
 import AreaCalculator from '@/components/pages/guest/AreaCalculator';
