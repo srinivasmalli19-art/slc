@@ -2118,7 +2118,8 @@ async def get_vaccinations(
     vaccine_name: Optional[str] = None,
     user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
 ):
-    query = {}
+    # Only query records with the new schema (have case_number field)
+    query = {"case_number": {"$exists": True}}
     if animal_type and animal_type != "all":
         query["animal_type"] = animal_type
     if species and species != "all":
