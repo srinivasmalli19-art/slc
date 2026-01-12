@@ -218,6 +218,18 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Backend APIs
 
+### Preventive & Breeding APIs (NEW - January 12, 2026)
+- POST `/api/vet/vaccination` - Create vaccination record (auto-generates VAC-L/VAC-S-YYYY-XXXXX)
+- GET `/api/vet/vaccination` - List vaccination records (with animal_type/species/vaccine_name filters)
+- POST `/api/vet/deworming` - Create deworming record (auto-generates DEW-YYYY-XXXXX)
+- GET `/api/vet/deworming` - List deworming records (with species/drug_used filters)
+- POST `/api/vet/ai-register` - Create AI record (auto-generates AI-YYYY-XXXXX with monthly/yearly numbers)
+- GET `/api/vet/ai-register` - List AI records (with species/village/pd_result filters)
+- GET `/api/vet/ai-register/{id}` - Get AI record by ID
+- PUT `/api/vet/ai-register/{id}` - Update AI record (for PD results, calf birth)
+- POST `/api/vet/calf-birth` - Create calf birth record (auto-generates CALF-YYYY-XXXXX)
+- GET `/api/vet/calf-birth` - List calf birth records (with species/calf_sex filters)
+
 ### Ration Calculator APIs (NEW - January 12, 2026)
 - GET `/api/admin/feed-items` - List feed items (with category/species filters)
 - POST `/api/admin/feed-items` - Create feed item (Admin only)
