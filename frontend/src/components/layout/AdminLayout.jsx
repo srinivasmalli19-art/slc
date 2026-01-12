@@ -110,12 +110,12 @@ const AdminLayout = () => {
     },
     { 
       icon: Lock, 
-      label: '8. Data Locking', 
+      label: '10. Data Locking', 
       path: '/admin/data-lock' 
     },
     { 
       icon: FileText, 
-      label: '9. Reports', 
+      label: '11. Reports', 
       key: 'reports',
       submenu: [
         { label: 'User Activity', path: '/admin/reports/user-activity' },
@@ -126,17 +126,17 @@ const AdminLayout = () => {
     },
     { 
       icon: Bell, 
-      label: '10. Notifications', 
+      label: '12. Notifications', 
       path: '/admin/notifications' 
     },
     { 
       icon: Database, 
-      label: '11. Backup & Integrity', 
+      label: '13. Backup & Integrity', 
       path: '/admin/backup' 
     },
     { 
       icon: Building2, 
-      label: '12. Institutions', 
+      label: '14. Institutions', 
       path: '/admin/institutions' 
     },
   ];
