@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, Loader2, Search, Filter, Eye, CheckCircle2, 
-  Bed, Calendar, Clock, AlertTriangle, ArrowRightLeft
+  Bed, Calendar, AlertTriangle, ArrowRightLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,23 +29,12 @@ import { formatDate, speciesDisplayNames } from '@/lib/utils';
 
 const speciesOptions = Object.entries(speciesDisplayNames);
 
-const statusOptions = [
-  { value: 'admitted', label: 'Admitted', color: 'bg-blue-100 text-blue-700' },
-  { value: 'under_treatment', label: 'Under Treatment', color: 'bg-amber-100 text-amber-700' },
-  { value: 'critical', label: 'Critical', color: 'bg-red-100 text-red-700' },
-  { value: 'stable', label: 'Stable', color: 'bg-green-100 text-green-700' },
-  { value: 'discharged', label: 'Discharged', color: 'bg-slate-100 text-slate-700' },
-  { value: 'died', label: 'Died', color: 'bg-slate-800 text-white' },
-  { value: 'referred', label: 'Referred', color: 'bg-purple-100 text-purple-700' },
-];
-
-const outcomeOptions = [
-  { value: 'recovered', label: 'Recovered' },
-  { value: 'improved', label: 'Improved' },
-  { value: 'same', label: 'No Change' },
-  { value: 'deteriorated', label: 'Deteriorated' },
-  { value: 'died', label: 'Died' },
-  { value: 'referred', label: 'Referred Out' },
+const resultOptions = [
+  { value: 'ongoing', label: 'Ongoing', color: 'bg-blue-100 text-blue-700' },
+  { value: 'cured', label: 'Cured', color: 'bg-green-100 text-green-700' },
+  { value: 'improved', label: 'Improved', color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'referred', label: 'Referred', color: 'bg-amber-100 text-amber-700' },
+  { value: 'died', label: 'Died', color: 'bg-red-100 text-red-700' },
 ];
 
 const IPDRegister = () => {
@@ -54,32 +43,26 @@ const IPDRegister = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterResult, setFilterResult] = useState('all');
   const [filterSpecies, setFilterSpecies] = useState('all');
   const [viewRecord, setViewRecord] = useState(null);
   
   const initialFormState = {
-    // From OPD base
     tag_number: '',
     farmer_name: '',
-    farmer_id: '',
     farmer_village: '',
     farmer_phone: '',
     species: 'cattle',
     breed: '',
     age_months: '',
-    sex: 'male',
-    body_weight_kg: '',
-    symptoms: '',  // Required from OPD
-    tentative_diagnosis: '',  // Required from OPD
-    treatment: '',  // Required from OPD
+    symptoms: '',
+    tentative_diagnosis: '',
+    treatment: '',
     result: 'ongoing',
     follow_up_date: '',
-    // IPD specific
     admission_date: new Date().toISOString().split('T')[0],
-    bed_number: '',
     discharge_date: '',
-    daily_observations: [],
+    bed_number: '',
     remarks: '',
   };
 
@@ -153,12 +136,12 @@ const IPDRegister = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const getStatusBadge = (status) => {
-    const option = statusOptions.find(o => o.value === status);
+  const getResultBadge = (result) => {
+    const option = resultOptions.find(o => o.value === result);
     return option ? (
       <Badge className={option.color}>{option.label}</Badge>
     ) : (
-      <Badge variant="outline">{status}</Badge>
+      <Badge variant="outline">{result}</Badge>
     );
   };
 
@@ -168,17 +151,17 @@ const IPDRegister = () => {
       r.tag_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.farmer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.bed_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || r.ipd_status === filterStatus;
+    const matchesResult = filterResult === 'all' || r.result === filterResult;
     const matchesSpecies = filterSpecies === 'all' || r.species === filterSpecies;
-    return matchesSearch && matchesStatus && matchesSpecies;
+    return matchesSearch && matchesResult && matchesSpecies;
   });
 
   const stats = {
     total: records.length,
-    admitted: records.filter(r => ['admitted', 'under_treatment', 'critical', 'stable'].includes(r.ipd_status)).length,
-    critical: records.filter(r => r.ipd_status === 'critical').length,
-    discharged: records.filter(r => r.ipd_status === 'discharged').length,
-    died: records.filter(r => r.ipd_status === 'died').length,
+    ongoing: records.filter(r => r.result === 'ongoing').length,
+    cured: records.filter(r => r.result === 'cured').length,
+    discharged: records.filter(r => r.discharge_date).length,
+    died: records.filter(r => r.result === 'died').length,
   };
 
   return (
@@ -198,7 +181,7 @@ const IPDRegister = () => {
               New Admission
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Bed className="h-5 w-5 text-indigo-600" />
@@ -252,7 +235,7 @@ const IPDRegister = () => {
               {/* Animal Info */}
               <div className="border-b pb-4">
                 <h3 className="text-sm font-medium text-slate-700 mb-3">Animal Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Species *</Label>
                     <Select value={formData.species} onValueChange={(v) => handleChange('species', v)}>
@@ -275,25 +258,12 @@ const IPDRegister = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Sex</Label>
-                    <Select value={formData.sex} onValueChange={(v) => handleChange('sex', v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Weight (kg)</Label>
+                    <Label>Age (months)</Label>
                     <Input
                       type="number"
-                      step="0.1"
-                      value={formData.body_weight_kg}
-                      onChange={(e) => handleChange('body_weight_kg', e.target.value)}
-                      placeholder="Weight"
+                      value={formData.age_months}
+                      onChange={(e) => handleChange('age_months', e.target.value)}
+                      placeholder="Age"
                     />
                   </div>
                 </div>
@@ -302,7 +272,7 @@ const IPDRegister = () => {
               {/* Admission Details */}
               <div className="border-b pb-4">
                 <h3 className="text-sm font-medium text-slate-700 mb-3">Admission Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Admission Date *</Label>
                     <Input
@@ -379,58 +349,6 @@ const IPDRegister = () => {
                   rows={2}
                 />
               </div>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {outcomeOptions.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Days Hospitalized</Label>
-                        <Input
-                          type="number"
-                          value={formData.days_hospitalized}
-                          onChange={(e) => handleChange('days_hospitalized', e.target.value)}
-                          placeholder="Days"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Total Charges (₹)</Label>
-                    <Input
-                      type="number"
-                      value={formData.total_charges}
-                      onChange={(e) => handleChange('total_charges', e.target.value)}
-                      placeholder="Amount"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Follow-up Date</Label>
-                    <Input
-                      type="date"
-                      value={formData.follow_up_date}
-                      onChange={(e) => handleChange('follow_up_date', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Remarks */}
-              <div className="space-y-2">
-                <Label>Remarks</Label>
-                <Textarea
-                  value={formData.remarks}
-                  onChange={(e) => handleChange('remarks', e.target.value)}
-                  placeholder="Additional notes..."
-                  rows={2}
-                />
-              </div>
 
               <Button type="submit" className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700" disabled={saving} data-testid="submit-ipd">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -463,8 +381,34 @@ const IPDRegister = () => {
                 <Bed className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-600">{stats.admitted}</p>
-                <p className="text-xs text-slate-500">Currently Admitted</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.ongoing}</p>
+                <p className="text-xs text-slate-500">Ongoing</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{stats.cured}</p>
+                <p className="text-xs text-slate-500">Cured</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <ArrowRightLeft className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600">{stats.discharged}</p>
+                <p className="text-xs text-slate-500">Discharged</p>
               </div>
             </div>
           </CardContent>
@@ -476,33 +420,7 @@ const IPDRegister = () => {
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-red-600">{stats.critical}</p>
-                <p className="text-xs text-slate-500">Critical</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <ArrowRightLeft className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-green-600">{stats.discharged}</p>
-                <p className="text-xs text-slate-500">Discharged</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
-                <Clock className="h-5 w-5 text-slate-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-600">{stats.died}</p>
+                <p className="text-2xl font-bold text-red-600">{stats.died}</p>
                 <p className="text-xs text-slate-500">Deaths</p>
               </div>
             </div>
@@ -524,14 +442,14 @@ const IPDRegister = () => {
                 data-testid="ipd-search"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <Select value={filterResult} onValueChange={setFilterResult}>
               <SelectTrigger className="w-40">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder="Result" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                {statusOptions.map(o => (
+                <SelectItem value="all">All Results</SelectItem>
+                {resultOptions.map(o => (
                   <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -567,47 +485,40 @@ const IPDRegister = () => {
       ) : (
         <div className="space-y-3">
           {filteredRecords.map((r) => (
-            <Card key={r.id} className={`hover:shadow-md transition-shadow ${r.ipd_status === 'critical' ? 'border-red-300 bg-red-50/30' : ''}`}>
+            <Card key={r.id} className={`hover:shadow-md transition-shadow ${r.result === 'died' ? 'border-red-300 bg-red-50/30' : ''}`}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                      r.ipd_status === 'critical' ? 'bg-red-100' : 
-                      ['admitted', 'under_treatment'].includes(r.ipd_status) ? 'bg-blue-100' : 
-                      r.ipd_status === 'discharged' ? 'bg-green-100' : 'bg-slate-100'
+                      r.result === 'ongoing' ? 'bg-blue-100' : 
+                      r.result === 'cured' ? 'bg-green-100' : 
+                      r.result === 'died' ? 'bg-red-100' : 'bg-slate-100'
                     }`}>
                       <Bed className={`h-6 w-6 ${
-                        r.ipd_status === 'critical' ? 'text-red-600' :
-                        ['admitted', 'under_treatment'].includes(r.ipd_status) ? 'text-blue-600' :
-                        r.ipd_status === 'discharged' ? 'text-green-600' : 'text-slate-600'
+                        r.result === 'ongoing' ? 'text-blue-600' :
+                        r.result === 'cured' ? 'text-green-600' :
+                        r.result === 'died' ? 'text-red-600' : 'text-slate-600'
                       }`} />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-slate-800">{r.case_number}</h3>
-                        {getStatusBadge(r.ipd_status)}
+                        {getResultBadge(r.result)}
                         <Badge variant="outline" className="text-indigo-600">
                           Bed: {r.bed_number}
                         </Badge>
                       </div>
                       <p className="text-sm text-slate-600">
-                        {speciesDisplayNames[r.species] || r.species} • Tag: {r.tag_number} • {r.diagnosis || r.chief_complaint}
+                        {speciesDisplayNames[r.species] || r.species} • Tag: {r.tag_number} • {r.tentative_diagnosis}
                       </p>
                       <p className="text-xs text-slate-500">
                         {r.farmer_name} • {r.farmer_village} • Admitted: {formatDate(r.admission_date)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {r.days_hospitalized && (
-                      <p className="text-xs text-slate-500">
-                        {r.days_hospitalized} days
-                      </p>
-                    )}
-                    <Button variant="outline" size="sm" onClick={() => setViewRecord(r)} data-testid={`view-ipd-${r.id}`}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setViewRecord(r)} data-testid={`view-ipd-${r.id}`}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -632,8 +543,8 @@ const IPDRegister = () => {
                   <p className="font-medium">{viewRecord.bed_number}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-slate-500">Status</Label>
-                  <div className="mt-1">{getStatusBadge(viewRecord.ipd_status)}</div>
+                  <Label className="text-xs text-slate-500">Result</Label>
+                  <div className="mt-1">{getResultBadge(viewRecord.result)}</div>
                 </div>
                 <div>
                   <Label className="text-xs text-slate-500">Admission Date</Label>
@@ -663,41 +574,24 @@ const IPDRegister = () => {
                 <h4 className="text-sm font-medium text-slate-700 mb-2">Clinical Details</h4>
                 <div className="space-y-2">
                   <div>
-                    <Label className="text-xs text-slate-500">Chief Complaint</Label>
-                    <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.chief_complaint}</p>
+                    <Label className="text-xs text-slate-500">Symptoms</Label>
+                    <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.symptoms}</p>
                   </div>
-                  {viewRecord.diagnosis && (
-                    <div>
-                      <Label className="text-xs text-slate-500">Diagnosis</Label>
-                      <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.diagnosis}</p>
-                    </div>
-                  )}
-                  {viewRecord.treatment && (
-                    <div>
-                      <Label className="text-xs text-slate-500">Treatment</Label>
-                      <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.treatment}</p>
-                    </div>
-                  )}
+                  <div>
+                    <Label className="text-xs text-slate-500">Diagnosis</Label>
+                    <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.tentative_diagnosis}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-slate-500">Treatment</Label>
+                    <p className="text-sm bg-slate-50 p-2 rounded">{viewRecord.treatment}</p>
+                  </div>
                 </div>
               </div>
 
               {viewRecord.discharge_date && (
                 <div className="border-t pt-4 bg-green-50 p-3 rounded">
                   <h4 className="text-sm font-medium text-green-700 mb-2">Discharge Info</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-slate-500">Discharge Date</Label>
-                      <p className="font-medium">{formatDate(viewRecord.discharge_date)}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Outcome</Label>
-                      <p className="font-medium capitalize">{viewRecord.discharge_outcome}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-slate-500">Days Hospitalized</Label>
-                      <p className="font-medium">{viewRecord.days_hospitalized || 'N/A'}</p>
-                    </div>
-                  </div>
+                  <p className="font-medium">Discharged: {formatDate(viewRecord.discharge_date)}</p>
                 </div>
               )}
 
