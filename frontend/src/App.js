@@ -265,6 +265,20 @@ function AppRoutes() {
         {/* RBAC */}
         <Route path="rbac" element={<PlaceholderPage title="Role & Permission Control" description="Configure role-based access control" />} />
         
+        {/* Ration Calculator Management */}
+        <Route path="ration/species" element={<PlaceholderPage title="Species Master" description="Manage species for ration calculator" />} />
+        <Route path="ration/categories" element={<PlaceholderPage title="Feed Categories" description="Manage feed categories" />} />
+        <Route path="ration/feeds" element={<FeedItemsMaster />} />
+        <Route path="ration/rules" element={<PlaceholderPage title="Nutrition Rules" description="Species-specific nutrition rules (ICAR)" />} />
+        <Route path="ration/versions" element={<PlaceholderPage title="Version Management" description="Nutrition data version control" />} />
+        <Route path="ration/results" element={<PlaceholderPage title="Usage & Results" description="Ration calculation audit" />} />
+        
+        {/* Diagnostics & Labs Management */}
+        <Route path="diagnostics/tests" element={<DiagnosticTestsMaster />} />
+        <Route path="diagnostics/ranges" element={<PlaceholderPage title="Normal Ranges" description="Species-specific normal ranges" />} />
+        <Route path="diagnostics/rules" element={<PlaceholderPage title="Interpretation Rules" description="Diagnostic interpretation logic" />} />
+        <Route path="diagnostics/results" element={<PlaceholderPage title="Test Results Audit" description="All diagnostic results" />} />
+        
         {/* Knowledge Center */}
         <Route path="knowledge" element={<KnowledgeCenter />} />
         <Route path="knowledge/cbc" element={<KnowledgeCenter />} />
