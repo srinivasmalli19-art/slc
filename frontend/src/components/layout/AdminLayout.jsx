@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Users, BookOpen, Shield, Settings, 
   FileText, Bell, Database, Lock, ChevronDown, ChevronRight, 
   X, Menu, Activity, ClipboardList, Building2, AlertTriangle,
-  History, Download
+  History, Download, Calculator, Leaf, TestTube, FlaskConical,
+  PawPrint, Wheat, Beaker
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Disclaimer from '@/components/layout/Disclaimer';
