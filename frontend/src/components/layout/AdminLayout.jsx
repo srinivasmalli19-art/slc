@@ -47,9 +47,33 @@ const AdminLayout = () => {
       label: '3. Role & Permissions', 
       path: '/admin/rbac' 
     },
+    {
+      icon: Wheat,
+      label: '4. Ration Calculator',
+      key: 'ration',
+      submenu: [
+        { label: 'Species Master', path: '/admin/ration/species' },
+        { label: 'Feed Categories', path: '/admin/ration/categories' },
+        { label: 'Feed Items Master', path: '/admin/ration/feeds' },
+        { label: 'Nutrition Rules', path: '/admin/ration/rules' },
+        { label: 'Version Management', path: '/admin/ration/versions' },
+        { label: 'Usage & Results', path: '/admin/ration/results' },
+      ]
+    },
+    {
+      icon: FlaskConical,
+      label: '5. Diagnostics & Labs',
+      key: 'diagnostics',
+      submenu: [
+        { label: 'Test Master', path: '/admin/diagnostics/tests' },
+        { label: 'Normal Ranges', path: '/admin/diagnostics/ranges' },
+        { label: 'Interpretation Rules', path: '/admin/diagnostics/rules' },
+        { label: 'Test Results Audit', path: '/admin/diagnostics/results' },
+      ]
+    },
     { 
       icon: BookOpen, 
-      label: '4. Knowledge Center', 
+      label: '6. Knowledge Center', 
       key: 'knowledge',
       submenu: [
         { label: 'All Entries', path: '/admin/knowledge' },
@@ -61,7 +85,7 @@ const AdminLayout = () => {
     },
     { 
       icon: AlertTriangle, 
-      label: '5. Safety Rules', 
+      label: '7. Safety Rules', 
       key: 'safety',
       submenu: [
         { label: 'Zoonotic Diseases', path: '/admin/safety/zoonotic' },
@@ -71,12 +95,12 @@ const AdminLayout = () => {
     },
     { 
       icon: ClipboardList, 
-      label: '6. Audit Logs', 
+      label: '8. Audit Logs', 
       path: '/admin/audit-logs' 
     },
     { 
       icon: Settings, 
-      label: '7. System Settings', 
+      label: '9. System Settings', 
       key: 'settings',
       submenu: [
         { label: 'General Settings', path: '/admin/settings/general' },
