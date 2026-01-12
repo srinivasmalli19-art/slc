@@ -2079,6 +2079,459 @@ async def update_castration_case(case_id: str, case: CastrationCaseCreate, user:
     updated = await db.castration_cases.find_one({"id": case_id}, {"_id": 0})
     return CastrationCaseResponse(**updated)
 
+# ============ VACCINATION REGISTER ROUTES ============
+
+async def generate_vaccination_number(animal_type: str):
+    prefix = "VAC-L" if animal_type == "large" else "VAC-S"
+    year = datetime.now(timezone.utc).year
+    count = await db.vaccinations.count_documents({
+        "case_number": {"$regex": f"^{prefix}-{year}-"}
+    })
+    return f"{prefix}-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/vaccination", response_model=VaccinationResponse)
+async def create_vaccination(vacc: VaccinationCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    vacc_dict = vacc.model_dump()
+    vacc_dict["id"] = str(uuid.uuid4())
+    vacc_dict["case_number"] = await generate_vaccination_number(vacc.animal_type)
+    year = datetime.now(timezone.utc).year
+    prefix = "VAC-L" if vacc.animal_type == "large" else "VAC-S"
+    count = await db.vaccinations.count_documents({"case_number": {"$regex": f"^{prefix}-{year}-"}})
+    vacc_dict["serial_number"] = count
+    vacc_dict["vet_id"] = user["id"]
+    vacc_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    vacc_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    if not vacc_dict.get("vaccination_date"):
+        vacc_dict["vaccination_date"] = datetime.now(timezone.utc).isoformat()
+    vacc_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    vacc_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.vaccinations.insert_one(vacc_dict)
+    if "_id" in vacc_dict:
+        del vacc_dict["_id"]
+    return VaccinationResponse(**vacc_dict)
+
+@api_router.get("/vet/vaccination", response_model=List[VaccinationResponse])
+async def get_vaccinations(
+    animal_type: Optional[str] = None,
+    species: Optional[str] = None,
+    vaccine_name: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if animal_type and animal_type != "all":
+        query["animal_type"] = animal_type
+    if species and species != "all":
+        query["species"] = species
+    if vaccine_name:
+        query["vaccine_name"] = {"$regex": vaccine_name, "$options": "i"}
+    records = await db.vaccinations.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [VaccinationResponse(**r) for r in records]
+
+# ============ DEWORMING REGISTER ROUTES ============
+
+async def generate_deworming_number():
+    year = datetime.now(timezone.utc).year
+    count = await db.dewormings.count_documents({"case_number": {"$regex": f"^DEW-{year}-"}})
+    return f"DEW-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/deworming", response_model=DewormingResponse)
+async def create_deworming(dew: DewormingCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    dew_dict = dew.model_dump()
+    dew_dict["id"] = str(uuid.uuid4())
+    dew_dict["case_number"] = await generate_deworming_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.dewormings.count_documents({"case_number": {"$regex": f"^DEW-{year}-"}})
+    dew_dict["serial_number"] = count
+    dew_dict["vet_id"] = user["id"]
+    dew_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    dew_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    if not dew_dict.get("deworming_date"):
+        dew_dict["deworming_date"] = datetime.now(timezone.utc).isoformat()
+    dew_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    dew_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.dewormings.insert_one(dew_dict)
+    if "_id" in dew_dict:
+        del dew_dict["_id"]
+    return DewormingResponse(**dew_dict)
+
+@api_router.get("/vet/deworming", response_model=List[DewormingResponse])
+async def get_dewormings(
+    species: Optional[str] = None,
+    drug_used: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if drug_used:
+        query["drug_used"] = {"$regex": drug_used, "$options": "i"}
+    records = await db.dewormings.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [DewormingResponse(**r) for r in records]
+
+# ============ AI REGISTER ROUTES (CRITICAL) ============
+
+async def generate_ai_numbers():
+    now = datetime.now(timezone.utc)
+    year = now.year
+    month = now.month
+    yearly_count = await db.ai_registers.count_documents({"case_number": {"$regex": f"^AI-{year}-"}})
+    monthly_count = await db.ai_registers.count_documents({
+        "case_number": {"$regex": f"^AI-{year}-"},
+        "ai_date": {"$regex": f"^{year}-{str(month).zfill(2)}"}
+    })
+    case_number = f"AI-{year}-{str(yearly_count + 1).zfill(5)}"
+    return case_number, yearly_count + 1, monthly_count + 1
+
+@api_router.post("/vet/ai-register", response_model=AIRegisterResponse)
+async def create_ai_record(ai: AIRegisterCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    ai_dict = ai.model_dump()
+    ai_dict["id"] = str(uuid.uuid4())
+    case_number, yearly_num, monthly_num = await generate_ai_numbers()
+    ai_dict["case_number"] = case_number
+    ai_dict["yearly_number"] = yearly_num
+    ai_dict["monthly_number"] = monthly_num
+    year = datetime.now(timezone.utc).year
+    count = await db.ai_registers.count_documents({"case_number": {"$regex": f"^AI-{year}-"}})
+    ai_dict["serial_number"] = count
+    ai_dict["vet_id"] = user["id"]
+    ai_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    ai_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    ai_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    ai_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.ai_registers.insert_one(ai_dict)
+    if "_id" in ai_dict:
+        del ai_dict["_id"]
+    return AIRegisterResponse(**ai_dict)
+
+@api_router.get("/vet/ai-register", response_model=List[AIRegisterResponse])
+async def get_ai_records(
+    species: Optional[str] = None,
+    village: Optional[str] = None,
+    pd_result: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if village:
+        query["village"] = {"$regex": village, "$options": "i"}
+    if pd_result and pd_result != "all":
+        query["pd_result"] = pd_result
+    records = await db.ai_registers.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [AIRegisterResponse(**r) for r in records]
+
+@api_router.get("/vet/ai-register/{ai_id}", response_model=AIRegisterResponse)
+async def get_ai_record(ai_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    record = await db.ai_registers.find_one({"id": ai_id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="AI record not found")
+    return AIRegisterResponse(**record)
+
+@api_router.put("/vet/ai-register/{ai_id}", response_model=AIRegisterResponse)
+async def update_ai_record(ai_id: str, ai: AIRegisterCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    existing = await db.ai_registers.find_one({"id": ai_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="AI record not found")
+    update_dict = ai.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.ai_registers.update_one({"id": ai_id}, {"$set": update_dict})
+    updated = await db.ai_registers.find_one({"id": ai_id}, {"_id": 0})
+    return AIRegisterResponse(**updated)
+
+# ============ CALF BIRTH REGISTER ROUTES ============
+
+async def generate_calf_birth_number():
+    year = datetime.now(timezone.utc).year
+    count = await db.calf_births.count_documents({"case_number": {"$regex": f"^CALF-{year}-"}})
+    return f"CALF-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/calf-birth", response_model=CalfBirthResponse)
+async def create_calf_birth(calf: CalfBirthCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    calf_dict = calf.model_dump()
+    calf_dict["id"] = str(uuid.uuid4())
+    calf_dict["case_number"] = await generate_calf_birth_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.calf_births.count_documents({"case_number": {"$regex": f"^CALF-{year}-"}})
+    calf_dict["serial_number"] = count
+    calf_dict["vet_id"] = user["id"]
+    calf_dict["vet_name"] = user["name"]
+    calf_dict["registered_at"] = datetime.now(timezone.utc).isoformat()
+    calf_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    calf_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.calf_births.insert_one(calf_dict)
+    if "_id" in calf_dict:
+        del calf_dict["_id"]
+    return CalfBirthResponse(**calf_dict)
+
+@api_router.get("/vet/calf-birth", response_model=List[CalfBirthResponse])
+async def get_calf_births(
+    species: Optional[str] = None,
+    calf_sex: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["dam_species"] = species
+    if calf_sex and calf_sex != "all":
+        query["calf_sex"] = calf_sex
+    records = await db.calf_births.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [CalfBirthResponse(**r) for r in records]
+
+# ============ OUTBREAK REGISTER ROUTES ============
+
+async def generate_outbreak_number():
+    year = datetime.now(timezone.utc).year
+    count = await db.outbreaks.count_documents({"outbreak_number": {"$regex": f"^OB-{year}-"}})
+    return f"OB-{year}-{str(count + 1).zfill(4)}"
+
+@api_router.post("/vet/outbreak", response_model=OutbreakResponse)
+async def create_outbreak(outbreak: OutbreakCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    ob_dict = outbreak.model_dump()
+    ob_dict["id"] = str(uuid.uuid4())
+    ob_dict["outbreak_number"] = await generate_outbreak_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.outbreaks.count_documents({"outbreak_number": {"$regex": f"^OB-{year}-"}})
+    ob_dict["serial_number"] = count
+    ob_dict["vet_id"] = user["id"]
+    ob_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    ob_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    if ob_dict["total_susceptible"] > 0:
+        ob_dict["morbidity_rate"] = round((ob_dict["animals_affected"] / ob_dict["total_susceptible"]) * 100, 2)
+        ob_dict["mortality_rate"] = round((ob_dict["deaths"] / ob_dict["animals_affected"]) * 100, 2) if ob_dict["animals_affected"] > 0 else 0
+    ob_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    ob_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.outbreaks.insert_one(ob_dict)
+    if "_id" in ob_dict:
+        del ob_dict["_id"]
+    return OutbreakResponse(**ob_dict)
+
+@api_router.get("/vet/outbreak", response_model=List[OutbreakResponse])
+async def get_outbreaks(
+    disease_name: Optional[str] = None,
+    status: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if disease_name:
+        query["disease_name"] = {"$regex": disease_name, "$options": "i"}
+    if status and status != "all":
+        query["outbreak_status"] = status
+    records = await db.outbreaks.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [OutbreakResponse(**r) for r in records]
+
+# ============ LIVESTOCK MORTALITY REGISTER ROUTES ============
+
+async def generate_mortality_number():
+    year = datetime.now(timezone.utc).year
+    count = await db.mortalities.count_documents({"case_number": {"$regex": f"^MORT-{year}-"}})
+    return f"MORT-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/mortality", response_model=MortalityResponse)
+async def create_mortality(mort: MortalityCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    mort_dict = mort.model_dump()
+    mort_dict["id"] = str(uuid.uuid4())
+    mort_dict["case_number"] = await generate_mortality_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.mortalities.count_documents({"case_number": {"$regex": f"^MORT-{year}-"}})
+    mort_dict["serial_number"] = count
+    mort_dict["vet_id"] = user["id"]
+    mort_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    mort_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    mort_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    mort_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.mortalities.insert_one(mort_dict)
+    if "_id" in mort_dict:
+        del mort_dict["_id"]
+    return MortalityResponse(**mort_dict)
+
+@api_router.get("/vet/mortality", response_model=List[MortalityResponse])
+async def get_mortalities(
+    species: Optional[str] = None,
+    cause_category: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if cause_category and cause_category != "all":
+        query["cause_category"] = cause_category
+    records = await db.mortalities.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [MortalityResponse(**r) for r in records]
+
+# ============ POST-MORTEM REGISTER ROUTES ============
+
+async def generate_pm_number():
+    year = datetime.now(timezone.utc).year
+    count = await db.post_mortems.count_documents({"pm_number": {"$regex": f"^PM-{year}-"}})
+    return f"PM-{year}-{str(count + 1).zfill(4)}"
+
+@api_router.post("/vet/post-mortem", response_model=PostMortemResponse)
+async def create_post_mortem(pm: PostMortemCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    pm_dict = pm.model_dump()
+    pm_dict["id"] = str(uuid.uuid4())
+    pm_dict["pm_number"] = await generate_pm_number()
+    year = datetime.now(timezone.utc).year
+    count = await db.post_mortems.count_documents({"pm_number": {"$regex": f"^PM-{year}-"}})
+    pm_dict["serial_number"] = count
+    pm_dict["vet_id"] = user["id"]
+    pm_dict["vet_name"] = user["name"]
+    vet_profile = await db.vet_profiles.find_one({"user_id": user["id"]})
+    pm_dict["institution_name"] = vet_profile.get("institution_name") if vet_profile else None
+    pm_dict["vet_registration_number"] = vet_profile.get("registration_number") if vet_profile else None
+    pm_dict["certificate_generated"] = False
+    pm_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    pm_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.post_mortems.insert_one(pm_dict)
+    if "_id" in pm_dict:
+        del pm_dict["_id"]
+    return PostMortemResponse(**pm_dict)
+
+@api_router.get("/vet/post-mortem", response_model=List[PostMortemResponse])
+async def get_post_mortems(
+    species: Optional[str] = None,
+    purpose: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if species and species != "all":
+        query["species"] = species
+    if purpose and purpose != "all":
+        query["purpose"] = purpose
+    records = await db.post_mortems.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [PostMortemResponse(**r) for r in records]
+
+@api_router.get("/vet/post-mortem/{pm_id}", response_model=PostMortemResponse)
+async def get_post_mortem(pm_id: str, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    record = await db.post_mortems.find_one({"id": pm_id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Post-mortem record not found")
+    return PostMortemResponse(**record)
+
+# ============ STOCK REGISTER ROUTES ============
+
+async def generate_stock_code(stock_type: str):
+    prefix_map = {"biological": "BIO", "medicine": "MED", "fodder_seed": "SEED", "feed": "FEED", "equipment": "EQP", "consumables": "CON"}
+    prefix = prefix_map.get(stock_type, "STK")
+    year = datetime.now(timezone.utc).year
+    count = await db.stock_entries.count_documents({"stock_code": {"$regex": f"^{prefix}-{year}-"}})
+    return f"{prefix}-{year}-{str(count + 1).zfill(4)}"
+
+@api_router.post("/vet/stock", response_model=StockEntryResponse)
+async def create_stock_entry(stock: StockEntryCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))):
+    stock_dict = stock.model_dump()
+    stock_dict["id"] = str(uuid.uuid4())
+    stock_dict["stock_code"] = await generate_stock_code(stock.stock_type)
+    count = await db.stock_entries.count_documents({})
+    stock_dict["serial_number"] = count + 1
+    stock_dict["created_by"] = user["id"]
+    try:
+        expiry = datetime.fromisoformat(stock.expiry_date.replace('Z', '+00:00')) if 'T' in stock.expiry_date else datetime.strptime(stock.expiry_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+        stock_dict["is_expired"] = expiry < datetime.now(timezone.utc)
+    except:
+        stock_dict["is_expired"] = False
+    stock_dict["is_low_stock"] = stock.current_stock <= (stock.minimum_stock_level or 0)
+    stock_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    stock_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.stock_entries.insert_one(stock_dict)
+    if "_id" in stock_dict:
+        del stock_dict["_id"]
+    return StockEntryResponse(**stock_dict)
+
+@api_router.get("/vet/stock", response_model=List[StockEntryResponse])
+async def get_stock_entries(
+    stock_type: Optional[str] = None,
+    is_expired: Optional[bool] = None,
+    is_low_stock: Optional[bool] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if stock_type and stock_type != "all":
+        query["stock_type"] = stock_type
+    if is_expired is not None:
+        query["is_expired"] = is_expired
+    if is_low_stock is not None:
+        query["is_low_stock"] = is_low_stock
+    records = await db.stock_entries.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [StockEntryResponse(**r) for r in records]
+
+@api_router.post("/vet/stock/{stock_id}/transaction", response_model=StockTransactionResponse)
+async def create_stock_transaction(stock_id: str, trans: StockTransactionCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    stock = await db.stock_entries.find_one({"id": stock_id})
+    if not stock:
+        raise HTTPException(status_code=404, detail="Stock entry not found")
+    current = stock["current_stock"]
+    if trans.transaction_type in ["issue", "dispose"]:
+        new_balance = current - trans.quantity
+        if new_balance < 0:
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+    elif trans.transaction_type in ["receive", "return"]:
+        new_balance = current + trans.quantity
+    else:
+        new_balance = trans.quantity
+    trans_dict = trans.model_dump()
+    trans_dict["id"] = str(uuid.uuid4())
+    trans_dict["transaction_date"] = datetime.now(timezone.utc).isoformat()
+    trans_dict["balance_after"] = new_balance
+    trans_dict["created_by"] = user["id"]
+    trans_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.stock_entries.update_one(
+        {"id": stock_id},
+        {"$set": {"current_stock": new_balance, "is_low_stock": new_balance <= (stock.get("minimum_stock_level") or 0), "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    await db.stock_transactions.insert_one(trans_dict)
+    if "_id" in trans_dict:
+        del trans_dict["_id"]
+    return StockTransactionResponse(**trans_dict)
+
+# ============ DISTRIBUTION REGISTER ROUTES ============
+
+async def generate_distribution_number(dist_type: str):
+    prefix = "SEED-D" if dist_type == "seed" else "FEED-D"
+    year = datetime.now(timezone.utc).year
+    count = await db.distributions.count_documents({"distribution_number": {"$regex": f"^{prefix}-{year}-"}})
+    return f"{prefix}-{year}-{str(count + 1).zfill(5)}"
+
+@api_router.post("/vet/distribution", response_model=DistributionResponse)
+async def create_distribution(dist: DistributionCreate, user: dict = Depends(require_role([UserRole.VETERINARIAN]))):
+    dist_dict = dist.model_dump()
+    dist_dict["id"] = str(uuid.uuid4())
+    dist_dict["distribution_number"] = await generate_distribution_number(dist.distribution_type)
+    year = datetime.now(timezone.utc).year
+    prefix = "SEED-D" if dist.distribution_type == "seed" else "FEED-D"
+    count = await db.distributions.count_documents({"distribution_number": {"$regex": f"^{prefix}-{year}-"}})
+    dist_dict["serial_number"] = count
+    dist_dict["distribution_date"] = datetime.now(timezone.utc).isoformat()
+    dist_dict["distributed_by"] = user["id"]
+    dist_dict["distributed_by_name"] = user["name"]
+    dist_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    dist_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    if dist.stock_id:
+        stock = await db.stock_entries.find_one({"id": dist.stock_id})
+        if stock:
+            new_balance = stock["current_stock"] - dist.quantity_distributed
+            if new_balance >= 0:
+                await db.stock_entries.update_one({"id": dist.stock_id}, {"$set": {"current_stock": new_balance, "updated_at": datetime.now(timezone.utc).isoformat()}})
+    await db.distributions.insert_one(dist_dict)
+    if "_id" in dist_dict:
+        del dist_dict["_id"]
+    return DistributionResponse(**dist_dict)
+
+@api_router.get("/vet/distribution", response_model=List[DistributionResponse])
+async def get_distributions(
+    distribution_type: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.ADMIN]))
+):
+    query = {}
+    if distribution_type and distribution_type != "all":
+        query["distribution_type"] = distribution_type
+    records = await db.distributions.find(query, {"_id": 0}).sort("serial_number", -1).to_list(1000)
+    return [DistributionResponse(**r) for r in records]
+
 # ============ VET DASHBOARD STATS (ENHANCED) ============
 
 @api_router.get("/dashboard/vet-stats-detailed")
