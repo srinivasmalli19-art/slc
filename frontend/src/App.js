@@ -210,11 +210,12 @@ function AppRoutes() {
         <Route path="calf-birth" element={<CalfBirthRegister />} />
         
         {/* Disease & Mortality */}
-        <Route path="outbreak" element={<PlaceholderPage title="Outbreak Register" />} />
-        <Route path="mortality" element={<PlaceholderPage title="Mortality Register" />} />
+        <Route path="outbreak" element={<OutbreakRegister />} />
+        <Route path="mortality" element={<MortalityRegister />} />
+        <Route path="ipd-register" element={<IPDRegister />} />
         
         {/* Post-Mortem */}
-        <Route path="postmortem" element={<PlaceholderPage title="Post-Mortem Register" />} />
+        <Route path="postmortem" element={<PostMortemRegister />} />
         <Route path="postmortem-cert" element={<PlaceholderPage title="Post-Mortem Certificate" />} />
         
         {/* Specimen & Lab */}
