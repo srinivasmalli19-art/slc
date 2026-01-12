@@ -130,12 +130,6 @@ const IPDRegister = () => {
       const payload = {
         ...formData,
         age_months: formData.age_months ? parseInt(formData.age_months) : null,
-        body_weight_kg: formData.body_weight_kg ? parseFloat(formData.body_weight_kg) : null,
-        temperature: formData.temperature ? parseFloat(formData.temperature) : null,
-        pulse_rate: formData.pulse_rate ? parseInt(formData.pulse_rate) : null,
-        respiration_rate: formData.respiration_rate ? parseInt(formData.respiration_rate) : null,
-        days_hospitalized: formData.days_hospitalized ? parseInt(formData.days_hospitalized) : null,
-        total_charges: formData.total_charges ? parseFloat(formData.total_charges) : null,
       };
 
       await api.post('/vet/ipd', payload);
