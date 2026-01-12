@@ -156,6 +156,39 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
   - Verify/Revoke verification with remarks
   - Jurisdiction villages display
 
+### ✅ Veterinarian Section - Batch A (Preventive & Breeding Services) COMPLETE (January 12, 2026)
+- **Vaccination Register**:
+  - Stats cards (Total Records, Animals Vaccinated, Large Animals, Small Animals, This Month)
+  - Case list with VAC-L/VAC-S-YYYY-XXXXX format (L=Large, S=Small animals)
+  - Tabs for Large Animals (Cattle, Buffalo, Sheep, Goat, Pig, Horse, Donkey, Camel) and Small Animals (Poultry, Dogs, Cats)
+  - New vaccination dialog with: Tag/ID, Farmer, Village, Phone, Species, Breed, Age, Vaccine (14 large animal vaccines, 13 small animal vaccines), Batch Number, Manufacturer, Dose Rate, Dose Given, Route (8 options), Vaccination Date, Next Due Date, Flock Size (small animals), Animals Vaccinated, Adverse Reaction, Remarks
+  - Search and filter by animal type, species
+  - View details dialog
+- **Deworming Register**:
+  - Stats cards (Total Records, Completed, This Month, Fecal Tested)
+  - Case list with DEW-YYYY-XXXXX format, drug used, dose, species, EPG Tested badge
+  - New deworming dialog with: Tag/ID, Farmer, Village, Phone, Species, Breed, Age, Body Weight, Drug Used (11 options including Albendazole, Ivermectin, Fenbendazole, Levamisole, etc.), Drug Batch, Dose Rate, Dose Given, Route (5 options), Deworming Date, Next Due Date (auto-calculated 3 months), Result (4 options), Fecal Sample Collected checkbox, EPG Before/After, Remarks
+  - Search and filter by species, drug
+  - View details dialog
+- **AI Register (Artificial Insemination)** - CRITICAL 25+ FIELDS:
+  - Stats cards (Total AI Records, Confirmed Pregnant, Not Pregnant, PD Pending)
+  - Case list with AI-YYYY-XXXXX format, Monthly and Yearly numbering, species, tag, bull breed, village, PD status badge
+  - 5-Tab New AI Record dialog:
+    - Basic Info: Village, Mandal, District, State, Farmer Name, Father's Name, Phone, Aadhaar, Address
+    - Semen Details: SS Number, Bull ID, Bull Breed, Semen Batch, Semen Station, AI Type (Fresh/Frozen), AI Date, AI Time, AI Attempt #, Straws Used, Heat Symptoms, Insemination Site
+    - Animal Details: Tag Number, Sire Number, Species (Cattle/Buffalo/Goat/Sheep), Breed, Age Years, Parity, Body Condition Score, Milk Yield
+    - Stock & Fee: Opening Balance, Straws Received, Straws Used Today, Closing Balance, Fee Amount, Receipt Number, Fee Date, LH Count, LHIII Count
+    - PD & Calf: PD Date, PD Result (Positive/Negative/Repeat), PD Days, Calf Birth Date, Calf Sex, Calf Weight, Calf Tag Number, Remarks
+  - Edit functionality for updating PD results and calf birth details
+  - Search and filter by species, PD result
+  - View details dialog with all sections
+- **Calf Birth Register**:
+  - Stats cards (Total Births, Male Calves, Female Calves, Twins, Stillborn)
+  - Case list with CALF-YYYY-XXXXX format, dam tag, calf sex, birth type badge, Twins/Stillborn badges
+  - New calf birth dialog with: Farmer Details (Name, Village, Phone, ID), Dam Details (Tag, Species, Breed, Condition), Sire Details (Tag, Breed, AI Case Number, AI Done Date), Birth Details (Expected Date, Actual Date, Birth Type (Normal/Assisted/Caesarean), First Colostrum Time, Twins checkbox, Stillborn checkbox), Calf Details (Sex, Weight, Tag, Color, Condition), Remarks
+  - Search and filter by species, calf sex
+  - View details dialog
+
 ### ✅ Ration Calculator & Knowledge Center - Phase 1 (Admin Master Tables) COMPLETE (January 12, 2026)
 - **Feed Items Master (Admin UI)**:
   - Stats cards (Total Feeds, Green Fodder, Concentrates, With Warnings)
