@@ -156,9 +156,59 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
   - Verify/Revoke verification with remarks
   - Jurisdiction villages display
 
+### ✅ Ration Calculator & Knowledge Center - Phase 1 (Admin Master Tables) COMPLETE (January 12, 2026)
+- **Feed Items Master (Admin UI)**:
+  - Stats cards (Total Feeds, Green Fodder, Concentrates, With Warnings)
+  - 28 pre-seeded feed items across all categories
+  - Full CRUD with: Name, Local Name, Category, Applicable Species, DM%, CP%, DCP%, TDN%, ME, NDF, ADF, Ca%, P%, Price, Max Inclusion%, Warnings
+  - Species multi-select with checkboxes
+  - Warning management (add/remove)
+  - Toxicity flag and notes
+  - Version control and audit logging
+- **Diagnostic Tests Master (Admin UI)**:
+  - Stats cards (Total Tests, Blood Tests, Zoonotic, Notifiable)
+  - 9 pre-seeded diagnostic tests (CBC, Biochemistry, Brucellosis, FMD, Pregnancy, Mineral Profile, Fecal, Milk, Skin Scraping)
+  - Full CRUD with: Name, Category, Sample Type, Purpose, Disease Nature, Parameters
+  - Species multi-select
+  - Disease Nature badges (Normal/Zoonotic/Notifiable/Emergency)
+  - Safety block for zoonotic diseases
+- **Backend Calculation Engine**:
+  - Ration calculation API with species-specific DM%, CP%, TDN% requirements
+  - 33 pre-seeded nutrition rules for all 10 species
+  - Auto-calculated suggested ration, protein status, energy status, daily cost, cost per litre milk
+  - Full audit logging of all calculations
+- **Diagnostic Interpretation Engine**:
+  - Auto-interpretation based on normal ranges
+  - Risk level calculation (Low/Moderate/High/Critical)
+  - Auto-triggered safety warnings for zoonotic diseases
+  - Suggested actions based on results
+
 ## Backend APIs
 
-### Clinical Registers APIs (NEW - January 11, 2026)
+### Ration Calculator APIs (NEW - January 12, 2026)
+- GET `/api/admin/feed-items` - List feed items (with category/species filters)
+- POST `/api/admin/feed-items` - Create feed item (Admin only)
+- PUT `/api/admin/feed-items/{id}` - Update feed item (Admin only, creates new version)
+- GET `/api/admin/nutrition-rules` - List nutrition rules (with species filter)
+- POST `/api/admin/nutrition-rules` - Create nutrition rule (Admin only)
+- PUT `/api/admin/nutrition-rules/{id}` - Update nutrition rule (Admin only)
+- POST `/api/ration/calculate` - Calculate ration (All roles)
+- GET `/api/ration/calculations` - Get calculation history (Admin only)
+- POST `/api/admin/seed-nutrition-data` - Seed initial nutrition data (Admin only)
+
+### Knowledge Center / Diagnostics APIs (NEW - January 12, 2026)
+- GET `/api/admin/diagnostic-tests` - List diagnostic tests (with category/species filters)
+- POST `/api/admin/diagnostic-tests` - Create diagnostic test (Admin only)
+- PUT `/api/admin/diagnostic-tests/{id}` - Update diagnostic test (Admin only, creates new version)
+- GET `/api/admin/normal-ranges` - List normal ranges (with test_id/species filters)
+- POST `/api/admin/normal-ranges` - Create normal range (Admin only)
+- PUT `/api/admin/normal-ranges/{id}` - Update normal range (Admin only)
+- POST `/api/diagnostics/interpret` - Interpret test results (Vet/Paravet)
+- GET `/api/diagnostics/results` - Get diagnostic results history
+- GET `/api/diagnostics/results/{id}` - Get specific diagnostic result
+- POST `/api/admin/seed-diagnostic-data` - Seed initial diagnostic data (Admin only)
+
+### Clinical Registers APIs (January 11, 2026)
 - POST `/api/vet/surgical` - Create surgical case (auto-generates SURG-YYYY-XXXXX)
 - GET `/api/vet/surgical` - List surgical cases (with species/outcome filters)
 - GET `/api/vet/surgical/{id}` - Get surgical case by ID
