@@ -212,7 +212,7 @@ function AppRoutes() {
         {/* Disease & Mortality */}
         <Route path="outbreak" element={<OutbreakRegister />} />
         <Route path="mortality" element={<MortalityRegister />} />
-        <Route path="ipd-register" element={<IPDRegister />} />
+        <Route path="ipd" element={<IPDRegister />} />
         
         {/* Post-Mortem */}
         <Route path="postmortem" element={<PostMortemRegister />} />
