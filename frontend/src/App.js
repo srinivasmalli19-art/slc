@@ -48,6 +48,8 @@ import UserDetail from '@/components/pages/admin/UserDetail';
 import AuditLogs from '@/components/pages/admin/AuditLogs';
 import SafetyRules from '@/components/pages/admin/SafetyRules';
 import InstitutionManagement from '@/components/pages/admin/InstitutionManagement';
+import FeedItemsMaster from '@/components/pages/admin/FeedItemsMaster';
+import DiagnosticTestsMaster from '@/components/pages/admin/DiagnosticTestsMaster';
 
 // Pages - Guest
 import AreaCalculator from '@/components/pages/guest/AreaCalculator';
