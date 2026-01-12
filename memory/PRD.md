@@ -312,11 +312,21 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - [ ] **Diagnostic Entry Screens** - Vet/Paravet data entry with auto-validation
 - [ ] **PDF Generation** - Ration reports and diagnostic reports
 
-### P1 - High Priority (Vet Batch 3)
+### P1 - High Priority (Vet Batch B - Disease & Mortality)
+- [ ] **Outbreak Register** - Disease outbreak tracking with government reporting
+- [ ] **Mortality Register** - Livestock mortality records with cause analysis
 - [ ] **IPD Register** - Admission/discharge tracking with bed numbers
-- [ ] **Vaccination Register** - Large/Small Animals with species-specific vaccines
-- [ ] **Deworming Register** - Drug selection, due date tracking
-- [ ] **AI Register** - Artificial Insemination multi-tab records
+
+### P2 - Vet Batch C (Post-Mortem & Legal)
+- [ ] **Post-Mortem Register** - Step-wise form with findings
+- [ ] **Post-Mortem Certificate** - PDF generation with official format
+- [ ] **Health Certificate Generator** - Auto-filled with PDF output
+
+### ✅ COMPLETED - Vet Batch A (January 12, 2026)
+- [x] **Vaccination Register** - Large/Small Animals with 27 vaccines, 8 routes
+- [x] **Deworming Register** - 11 drugs, EPG testing, auto-calculated next due date
+- [x] **AI Register** - 25+ fields, 5 tabs, PD tracking, calf birth follow-up
+- [x] **Calf Birth Register** - Dam/Sire tracking, birth types, twins/stillborn flags
 
 ### ✅ COMPLETED - Ration Calculator Phase 1 (January 12, 2026)
 - [x] **Feed Items Master** - 28 feeds with full nutrient tables, Admin CRUD
