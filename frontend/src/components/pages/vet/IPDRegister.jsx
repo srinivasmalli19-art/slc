@@ -368,86 +368,17 @@ const IPDRegister = () => {
                   </div>
                 </div>
               </div>
-                      onChange={(e) => handleChange('respiration_rate', e.target.value)}
-                      placeholder="/min"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Initial Condition</Label>
-                    <Select value={formData.initial_condition} onValueChange={(v) => handleChange('initial_condition', v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="stable">Stable</SelectItem>
-                        <SelectItem value="moderate">Moderate</SelectItem>
-                        <SelectItem value="critical">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Clinical Findings</Label>
-                    <Textarea
-                      value={formData.clinical_findings}
-                      onChange={(e) => handleChange('clinical_findings', e.target.value)}
-                      placeholder="Detailed clinical findings..."
-                      rows={2}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Provisional Diagnosis</Label>
-                    <Textarea
-                      value={formData.diagnosis}
-                      onChange={(e) => handleChange('diagnosis', e.target.value)}
-                      placeholder="Diagnosis..."
-                      rows={2}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2 mt-4">
-                  <Label>Treatment Plan</Label>
-                  <Textarea
-                    value={formData.treatment}
-                    onChange={(e) => handleChange('treatment', e.target.value)}
-                    placeholder="Treatment protocol..."
-                    rows={2}
-                  />
-                </div>
-              </div>
 
-              {/* Status & Discharge */}
-              <div className="border-b pb-4">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">Status & Discharge</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label>IPD Status</Label>
-                    <Select value={formData.ipd_status} onValueChange={(v) => handleChange('ipd_status', v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {['discharged', 'died', 'referred'].includes(formData.ipd_status) && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Discharge Date</Label>
-                        <Input
-                          type="date"
-                          value={formData.discharge_date}
-                          onChange={(e) => handleChange('discharge_date', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Discharge Outcome</Label>
-                        <Select value={formData.discharge_outcome} onValueChange={(v) => handleChange('discharge_outcome', v)}>
-                          <SelectTrigger>
+              {/* Remarks */}
+              <div className="space-y-2">
+                <Label>Remarks</Label>
+                <Textarea
+                  value={formData.remarks}
+                  onChange={(e) => handleChange('remarks', e.target.value)}
+                  placeholder="Additional notes..."
+                  rows={2}
+                />
+              </div>
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent>
