@@ -40,6 +40,10 @@ import GVAAnalysis from '@/components/pages/vet/GVAAnalysis';
 import SurgicalRegister from '@/components/pages/vet/SurgicalRegister';
 import GynaecologyRegister from '@/components/pages/vet/GynaecologyRegister';
 import CastrationRegister from '@/components/pages/vet/CastrationRegister';
+import VaccinationRegister from '@/components/pages/vet/VaccinationRegister';
+import DewormingRegister from '@/components/pages/vet/DewormingRegister';
+import AIRegister from '@/components/pages/vet/AIRegister';
+import CalfBirthRegister from '@/components/pages/vet/CalfBirthRegister';
 
 // Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
