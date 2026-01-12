@@ -8,6 +8,8 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - Support veterinarians with reference-based interpretation
 - Improve safety, documentation, reporting, and compliance
 - **CRITICAL**: System must NEVER replace a veterinarian's clinical judgment - all outputs are supportive & advisory only
+- **NEW**: Offline-capable multi-species ration calculator with Admin-controlled nutrition science
+- **NEW**: Knowledge Center for diagnostics & lab tests with centralized Admin control
 
 ## User Personas
 
@@ -16,27 +18,42 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - View own records
 - Enter vaccination/deworming/AI history
 - Use utility calculators
+- Use simplified ration calculator (view results only)
 - ❌ No diagnostics access
 - ❌ No Knowledge Center access
+- ❌ Cannot enter feed quantities or nutrient values
 
 ### 2. Paravet (Field Worker)
 - Enter field data
 - Vaccination, deworming, AI, census
 - Sample collection entry
+- Use ration calculator (read-only)
+- View diagnostic knowledge (read-only)
 - ❌ Cannot diagnose
 - ❌ Cannot approve reports
+- ❌ Cannot edit nutrition/diagnostic tables
 
 ### 3. Veterinarian (Clinical Authority)
 - Enter & interpret diagnostic values
 - Generate official PDFs
 - Access Knowledge Center (READ-ONLY)
+- Use full ration calculator
+- Enter diagnostic test values, view auto-interpretation
 - Final responsibility always with vet
+- ❌ Cannot edit master tables
 
-### 4. Admin/Department (Governance Authority)
+### 4. Admin/Department (Governance Authority) - SUPER CONTROLLER
 - Manage users (activate/deactivate/lock)
 - Control permissions
-- Edit Knowledge Center backend logic
-- Configure safety alerts
+- **FULL CONTROL** over:
+  - Feed Items Master (all nutrient tables)
+  - Species Nutrition Rules (ICAR logic)
+  - Diagnostic Test Master
+  - Normal Ranges
+  - Interpretation Rules
+  - Safety & Zoonotic Blocks
+- Version control for all scientific data
+- Audit all calculations and results
 - ❌ No clinical data entry
 
 ### 5. Guest (No Registration)
