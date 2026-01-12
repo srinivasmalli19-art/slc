@@ -106,7 +106,9 @@ const IPDRegister = () => {
     if (!formData.tag_number.trim()) errors.push('Tag Number is required');
     if (!formData.farmer_name.trim()) errors.push('Farmer Name is required');
     if (!formData.farmer_village.trim()) errors.push('Village is required');
-    if (!formData.chief_complaint.trim()) errors.push('Chief Complaint is required');
+    if (!formData.symptoms.trim()) errors.push('Symptoms are required');
+    if (!formData.tentative_diagnosis.trim()) errors.push('Tentative Diagnosis is required');
+    if (!formData.treatment.trim()) errors.push('Treatment is required');
     if (!formData.admission_date) errors.push('Admission Date is required');
     if (!formData.bed_number.trim()) errors.push('Bed Number is required');
     if (formData.farmer_phone && !/^\d{10}$/.test(formData.farmer_phone)) {
