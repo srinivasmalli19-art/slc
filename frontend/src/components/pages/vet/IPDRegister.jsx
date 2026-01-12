@@ -302,7 +302,7 @@ const IPDRegister = () => {
               {/* Admission Details */}
               <div className="border-b pb-4">
                 <h3 className="text-sm font-medium text-slate-700 mb-3">Admission Details</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Admission Date *</Label>
                     <Input
@@ -310,14 +310,6 @@ const IPDRegister = () => {
                       value={formData.admission_date}
                       onChange={(e) => handleChange('admission_date', e.target.value)}
                       data-testid="ipd-admission-date"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Admission Time</Label>
-                    <Input
-                      type="time"
-                      value={formData.admission_time}
-                      onChange={(e) => handleChange('admission_time', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
@@ -330,54 +322,52 @@ const IPDRegister = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ward</Label>
+                    <Label>Follow-up Date</Label>
                     <Input
-                      value={formData.ward}
-                      onChange={(e) => handleChange('ward', e.target.value)}
-                      placeholder="e.g., Large Animal Ward"
+                      type="date"
+                      value={formData.follow_up_date}
+                      onChange={(e) => handleChange('follow_up_date', e.target.value)}
                     />
                   </div>
-                </div>
-                <div className="mt-4 space-y-2">
-                  <Label>Admission Reason / Chief Complaint *</Label>
-                  <Textarea
-                    value={formData.chief_complaint}
-                    onChange={(e) => handleChange('chief_complaint', e.target.value)}
-                    placeholder="Main complaint / reason for admission..."
-                    rows={2}
-                    data-testid="ipd-complaint"
-                  />
                 </div>
               </div>
 
-              {/* Clinical Findings */}
+              {/* Clinical Details */}
               <div className="border-b pb-4">
-                <h3 className="text-sm font-medium text-slate-700 mb-3">Clinical Examination</h3>
-                <div className="grid grid-cols-4 gap-4">
+                <h3 className="text-sm font-medium text-slate-700 mb-3">Clinical Details</h3>
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Temperature (°F)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={formData.temperature}
-                      onChange={(e) => handleChange('temperature', e.target.value)}
-                      placeholder="°F"
+                    <Label>Symptoms *</Label>
+                    <Textarea
+                      value={formData.symptoms}
+                      onChange={(e) => handleChange('symptoms', e.target.value)}
+                      placeholder="Describe symptoms..."
+                      rows={2}
+                      data-testid="ipd-symptoms"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Pulse Rate</Label>
-                    <Input
-                      type="number"
-                      value={formData.pulse_rate}
-                      onChange={(e) => handleChange('pulse_rate', e.target.value)}
-                      placeholder="/min"
+                    <Label>Tentative Diagnosis *</Label>
+                    <Textarea
+                      value={formData.tentative_diagnosis}
+                      onChange={(e) => handleChange('tentative_diagnosis', e.target.value)}
+                      placeholder="Provisional diagnosis..."
+                      rows={2}
+                      data-testid="ipd-diagnosis"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Respiration Rate</Label>
-                    <Input
-                      type="number"
-                      value={formData.respiration_rate}
+                    <Label>Treatment *</Label>
+                    <Textarea
+                      value={formData.treatment}
+                      onChange={(e) => handleChange('treatment', e.target.value)}
+                      placeholder="Treatment protocol..."
+                      rows={2}
+                      data-testid="ipd-treatment"
+                    />
+                  </div>
+                </div>
+              </div>
                       onChange={(e) => handleChange('respiration_rate', e.target.value)}
                       placeholder="/min"
                     />
