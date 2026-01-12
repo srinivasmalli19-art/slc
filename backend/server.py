@@ -1113,6 +1113,525 @@ class CastrationCaseResponse(CastrationCaseBase):
     created_at: str
     updated_at: str
 
+# ============ VACCINATION REGISTER MODELS ============
+
+class VaccinationRouteEnum(str, Enum):
+    SUBCUTANEOUS = "subcutaneous"
+    INTRAMUSCULAR = "intramuscular"
+    INTRADERMAL = "intradermal"
+    ORAL = "oral"
+    INTRANASAL = "intranasal"
+    INTRAVENOUS = "intravenous"
+
+class VaccinationBase(BaseModel):
+    animal_type: str  # "large" or "small"
+    tag_number: str
+    farmer_name: str
+    farmer_id: Optional[str] = None
+    farmer_village: str
+    farmer_phone: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    vaccine_name: str
+    batch_number: Optional[str] = None
+    manufacturer: Optional[str] = None
+    dose_rate: str
+    dose_given: Optional[str] = None
+    route: str = "intramuscular"
+    vaccination_date: Optional[str] = None
+    next_due_date: Optional[str] = None
+    flock_size: Optional[int] = None  # For small animals only
+    animals_vaccinated: Optional[int] = 1
+    adverse_reaction: Optional[str] = None
+    remarks: Optional[str] = None
+
+class VaccinationCreate(VaccinationBase):
+    pass
+
+class VaccinationResponse(VaccinationBase):
+    id: str
+    serial_number: int
+    case_number: str
+    vet_id: str
+    vet_name: str
+    institution_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ DEWORMING REGISTER MODELS ============
+
+class DewormingBase(BaseModel):
+    tag_number: str
+    farmer_name: str
+    farmer_id: Optional[str] = None
+    farmer_village: str
+    farmer_phone: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    body_weight_kg: Optional[float] = None
+    drug_used: str
+    drug_batch: Optional[str] = None
+    dose_rate: str
+    dose_given: str
+    route: str = "oral"
+    deworming_date: Optional[str] = None
+    next_due_date: Optional[str] = None
+    result: str = "completed"
+    fecal_sample_taken: bool = False
+    epg_before: Optional[int] = None
+    epg_after: Optional[int] = None
+    remarks: Optional[str] = None
+
+class DewormingCreate(DewormingBase):
+    pass
+
+class DewormingResponse(DewormingBase):
+    id: str
+    serial_number: int
+    case_number: str
+    vet_id: str
+    vet_name: str
+    institution_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ AI REGISTER MODELS (CRITICAL - 25+ FIELDS) ============
+
+class AIRegisterBase(BaseModel):
+    # Location Details
+    village: str
+    mandal: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    
+    # Semen Straw Details
+    ss_number: str  # Semen Straw Number
+    bull_id: Optional[str] = None
+    bull_breed: Optional[str] = None
+    semen_batch: Optional[str] = None
+    semen_station: Optional[str] = None
+    
+    # Animal Details
+    tag_number: str
+    sire_number: Optional[str] = None
+    species: str
+    breed: Optional[str] = None
+    age_years: Optional[int] = None
+    parity: Optional[int] = None
+    body_condition_score: Optional[float] = None
+    milk_yield_liters: Optional[float] = None
+    
+    # Farmer Details
+    farmer_name: str
+    farmer_father_name: Optional[str] = None
+    farmer_address: Optional[str] = None
+    farmer_phone: str
+    farmer_aadhaar: Optional[str] = None
+    
+    # AI Details
+    ai_date: str
+    ai_time: Optional[str] = None
+    heat_symptoms: Optional[str] = None
+    ai_attempt_number: int = 1  # 1st, 2nd, 3rd AI
+    ai_type: str = "fresh"  # fresh, frozen
+    straws_used: int = 1
+    insemination_site: Optional[str] = None
+    
+    # Stock Details
+    opening_balance: Optional[int] = None
+    straws_received: Optional[int] = None
+    straws_used_today: Optional[int] = None
+    closing_balance: Optional[int] = None
+    
+    # Fee Details
+    fee_amount: Optional[float] = None
+    fee_receipt_number: Optional[str] = None
+    fee_date: Optional[str] = None
+    
+    # Pregnancy Diagnosis
+    pd_date: Optional[str] = None
+    pd_result: Optional[str] = None  # positive, negative, repeat
+    pd_days: Optional[int] = None
+    
+    # Calf Birth Details
+    calf_birth_date: Optional[str] = None
+    calf_sex: Optional[str] = None  # male, female
+    calf_weight_kg: Optional[float] = None
+    calf_tag_number: Optional[str] = None
+    
+    # Additional
+    lh_count: Optional[int] = None  # Liquid Handling count
+    lhiii_count: Optional[int] = None
+    remarks: Optional[str] = None
+
+class AIRegisterCreate(AIRegisterBase):
+    pass
+
+class AIRegisterResponse(AIRegisterBase):
+    id: str
+    serial_number: int
+    case_number: str
+    monthly_number: int
+    yearly_number: int
+    vet_id: str
+    vet_name: str
+    institution_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ CALF BIRTH REGISTER MODELS ============
+
+class CalfBirthBase(BaseModel):
+    farmer_name: str
+    farmer_id: Optional[str] = None
+    farmer_village: str
+    farmer_phone: Optional[str] = None
+    dam_tag_number: str
+    dam_species: str
+    dam_breed: Optional[str] = None
+    sire_tag_number: Optional[str] = None
+    sire_breed: Optional[str] = None
+    ai_done_date: Optional[str] = None
+    ai_case_number: Optional[str] = None
+    expected_birth_date: Optional[str] = None
+    actual_birth_date: str
+    birth_type: str = "normal"  # normal, assisted, caesarean
+    calf_sex: str  # male, female
+    calf_weight_kg: Optional[float] = None
+    calf_tag_number: Optional[str] = None
+    calf_color: Optional[str] = None
+    twins: bool = False
+    stillborn: bool = False
+    dam_condition: str = "good"
+    calf_condition: str = "healthy"
+    first_colostrum_time: Optional[str] = None
+    remarks: Optional[str] = None
+
+class CalfBirthCreate(CalfBirthBase):
+    pass
+
+class CalfBirthResponse(CalfBirthBase):
+    id: str
+    serial_number: int
+    case_number: str
+    vet_id: str
+    vet_name: str
+    registered_at: str
+    created_at: str
+    updated_at: str
+
+# ============ OUTBREAK REGISTER MODELS ============
+
+class OutbreakBase(BaseModel):
+    outbreak_date: str
+    disease_name: str
+    disease_nature: str = "normal"  # normal, zoonotic, notifiable
+    village: str
+    mandal: Optional[str] = None
+    district: Optional[str] = None
+    species_affected: List[str]
+    total_susceptible: int
+    animals_affected: int
+    animals_treated: int
+    deaths: int = 0
+    mortality_rate: Optional[float] = None
+    morbidity_rate: Optional[float] = None
+    source_of_infection: Optional[str] = None
+    spread_pattern: Optional[str] = None
+    control_measures: str
+    vaccination_done: bool = False
+    vaccination_count: Optional[int] = None
+    ring_vaccination: bool = False
+    quarantine_imposed: bool = False
+    samples_collected: bool = False
+    lab_results: Optional[str] = None
+    reported_to_authorities: bool = False
+    authority_report_date: Optional[str] = None
+    outbreak_status: str = "active"  # active, contained, closed
+    closure_date: Optional[str] = None
+    economic_loss_estimate: Optional[float] = None
+    remarks: Optional[str] = None
+
+class OutbreakCreate(OutbreakBase):
+    pass
+
+class OutbreakResponse(OutbreakBase):
+    id: str
+    serial_number: int
+    outbreak_number: str
+    vet_id: str
+    vet_name: str
+    institution_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ LIVESTOCK MORTALITY REGISTER MODELS ============
+
+class MortalityBase(BaseModel):
+    death_date: str
+    tag_number: str
+    species: str
+    breed: Optional[str] = None
+    age_months: Optional[int] = None
+    sex: Optional[str] = None
+    farmer_name: str
+    farmer_id: Optional[str] = None
+    farmer_village: str
+    farmer_phone: Optional[str] = None
+    cause_of_death: str
+    cause_category: str  # disease, accident, predator, unknown, natural
+    disease_suspected: Optional[str] = None
+    symptoms_before_death: Optional[str] = None
+    duration_of_illness: Optional[str] = None
+    treatment_given: Optional[str] = None
+    post_mortem_done: bool = False
+    post_mortem_findings: Optional[str] = None
+    samples_collected: bool = False
+    lab_confirmation: Optional[str] = None
+    disposal_method: str  # burial, burning, rendering
+    disposal_supervised: bool = True
+    insurance_claimed: bool = False
+    insurance_amount: Optional[float] = None
+    notified_to_authorities: bool = False
+    outbreak_linked: bool = False
+    outbreak_id: Optional[str] = None
+    remarks: Optional[str] = None
+
+class MortalityCreate(MortalityBase):
+    pass
+
+class MortalityResponse(MortalityBase):
+    id: str
+    serial_number: int
+    case_number: str
+    vet_id: str
+    vet_name: str
+    institution_name: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ POST-MORTEM REGISTER MODELS (SECTIONS A-I) ============
+
+class PostMortemBase(BaseModel):
+    # Section A: General Information
+    pm_date: str
+    pm_time: Optional[str] = None
+    pm_location: str
+    reference_number: Optional[str] = None
+    purpose: str  # insurance, legal, diagnostic, routine
+    
+    # Section B: Owner Details
+    owner_name: str
+    owner_father_name: Optional[str] = None
+    owner_address: str
+    owner_village: str
+    owner_mandal: Optional[str] = None
+    owner_district: Optional[str] = None
+    owner_phone: Optional[str] = None
+    owner_aadhaar: Optional[str] = None
+    
+    # Section C: Animal Identification
+    tag_number: str
+    species: str
+    breed: Optional[str] = None
+    age_years: Optional[int] = None
+    age_months: Optional[int] = None
+    sex: str
+    color_markings: Optional[str] = None
+    body_weight_kg: Optional[float] = None
+    identification_marks: Optional[str] = None
+    
+    # Section D: Death Details
+    death_date: str
+    death_time: Optional[str] = None
+    place_of_death: str
+    found_dead: bool = False
+    duration_of_illness: Optional[str] = None
+    symptoms_observed: Optional[str] = None
+    treatment_history: Optional[str] = None
+    vaccination_history: Optional[str] = None
+    feeding_history: Optional[str] = None
+    
+    # Section E: External Examination Findings
+    body_condition: str
+    rigor_mortis: str  # present, absent, partial
+    bloating: str  # none, mild, moderate, severe
+    discharge_from_orifices: Optional[str] = None
+    skin_condition: Optional[str] = None
+    mucous_membrane_color: Optional[str] = None
+    eyes_condition: Optional[str] = None
+    external_injuries: Optional[str] = None
+    parasites_observed: Optional[str] = None
+    other_external_findings: Optional[str] = None
+    
+    # Section F: Internal Examination Findings
+    subcutaneous_tissue: Optional[str] = None
+    musculature: Optional[str] = None
+    lymph_nodes: Optional[str] = None
+    respiratory_system: Optional[str] = None
+    cardiovascular_system: Optional[str] = None
+    digestive_system: Optional[str] = None
+    liver_findings: Optional[str] = None
+    spleen_findings: Optional[str] = None
+    kidney_findings: Optional[str] = None
+    reproductive_system: Optional[str] = None
+    nervous_system: Optional[str] = None
+    urinary_system: Optional[str] = None
+    other_internal_findings: Optional[str] = None
+    
+    # Section G: Diagnosis
+    gross_pathological_diagnosis: str
+    probable_cause_of_death: str
+    differential_diagnosis: Optional[str] = None
+    final_diagnosis: Optional[str] = None
+    
+    # Section H: Sample Collection
+    samples_collected: bool = False
+    sample_types: Optional[List[str]] = None
+    sample_preservation: Optional[str] = None
+    lab_submission_date: Optional[str] = None
+    lab_name: Optional[str] = None
+    lab_results: Optional[str] = None
+    
+    # Section I: Disposal & Preventive Measures
+    disposal_method: str
+    disposal_location: Optional[str] = None
+    disposal_supervised_by: Optional[str] = None
+    disinfection_done: bool = True
+    preventive_measures_advised: Optional[str] = None
+    quarantine_advised: bool = False
+    vaccination_advised: bool = False
+    
+    # Certification
+    insurance_case: bool = False
+    insurance_company: Optional[str] = None
+    insurance_policy_number: Optional[str] = None
+    estimated_value: Optional[float] = None
+    witnesses: Optional[str] = None
+    photographs_taken: bool = False
+    photograph_count: Optional[int] = None
+    
+    remarks: Optional[str] = None
+
+class PostMortemCreate(PostMortemBase):
+    pass
+
+class PostMortemResponse(PostMortemBase):
+    id: str
+    serial_number: int
+    pm_number: str
+    vet_id: str
+    vet_name: str
+    vet_registration_number: Optional[str] = None
+    institution_name: Optional[str] = None
+    certificate_generated: bool = False
+    certificate_date: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+# ============ STOCK REGISTER MODELS ============
+
+class StockType(str, Enum):
+    BIOLOGICAL = "biological"
+    MEDICINE = "medicine"
+    FODDER_SEED = "fodder_seed"
+    FEED = "feed"
+    EQUIPMENT = "equipment"
+    CONSUMABLES = "consumables"
+
+class StockEntryBase(BaseModel):
+    stock_type: str
+    item_name: str
+    item_category: Optional[str] = None
+    batch_number: str
+    manufacturer: Optional[str] = None
+    supplier: Optional[str] = None
+    manufacture_date: Optional[str] = None
+    expiry_date: str
+    quantity_received: float
+    unit: str  # vials, bottles, kg, packets, etc.
+    unit_price: Optional[float] = None
+    total_value: Optional[float] = None
+    storage_location: Optional[str] = None
+    storage_temperature: Optional[str] = None
+    receipt_number: Optional[str] = None
+    receipt_date: str
+    current_stock: float
+    minimum_stock_level: Optional[float] = None
+    remarks: Optional[str] = None
+
+class StockEntryCreate(StockEntryBase):
+    pass
+
+class StockEntryResponse(StockEntryBase):
+    id: str
+    serial_number: int
+    stock_code: str
+    is_expired: bool
+    is_low_stock: bool
+    created_by: str
+    created_at: str
+    updated_at: str
+
+class StockTransactionBase(BaseModel):
+    stock_id: str
+    transaction_type: str  # issue, receive, return, dispose, adjust
+    quantity: float
+    purpose: Optional[str] = None
+    issued_to: Optional[str] = None
+    case_reference: Optional[str] = None  # Link to vaccination/AI/treatment
+    remarks: Optional[str] = None
+
+class StockTransactionCreate(StockTransactionBase):
+    pass
+
+class StockTransactionResponse(StockTransactionBase):
+    id: str
+    transaction_date: str
+    balance_after: float
+    created_by: str
+    created_at: str
+
+# ============ DISTRIBUTION REGISTER MODELS ============
+
+class DistributionBase(BaseModel):
+    distribution_type: str  # seed, feed
+    item_name: str
+    stock_id: Optional[str] = None
+    batch_number: Optional[str] = None
+    farmer_name: str
+    farmer_id: Optional[str] = None
+    farmer_aadhaar: Optional[str] = None
+    farmer_phone: str
+    farmer_village: str
+    farmer_address: Optional[str] = None
+    quantity_distributed: float
+    unit: str
+    rate_per_unit: Optional[float] = None
+    total_amount: Optional[float] = None
+    subsidy_amount: Optional[float] = None
+    farmer_contribution: Optional[float] = None
+    payment_mode: Optional[str] = None
+    receipt_number: Optional[str] = None
+    scheme_name: Optional[str] = None
+    purpose: Optional[str] = None
+    remarks: Optional[str] = None
+
+class DistributionCreate(DistributionBase):
+    pass
+
+class DistributionResponse(DistributionBase):
+    id: str
+    serial_number: int
+    distribution_number: str
+    distribution_date: str
+    distributed_by: str
+    distributed_by_name: str
+    created_at: str
+    updated_at: str
+
 # ============ VET PROFILE & INSTITUTION ROUTES ============
 
 async def generate_vet_id():
