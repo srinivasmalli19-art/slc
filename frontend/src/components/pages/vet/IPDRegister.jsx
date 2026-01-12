@@ -70,28 +70,16 @@ const IPDRegister = () => {
     age_months: '',
     sex: 'male',
     body_weight_kg: '',
-    chief_complaint: '',
-    history: '',
-    clinical_findings: '',
-    temperature: '',
-    pulse_rate: '',
-    respiration_rate: '',
-    diagnosis: '',
-    treatment: '',
+    symptoms: '',  // Required from OPD
+    tentative_diagnosis: '',  // Required from OPD
+    treatment: '',  // Required from OPD
+    result: 'ongoing',
+    follow_up_date: '',
     // IPD specific
     admission_date: new Date().toISOString().split('T')[0],
-    admission_time: '',
     bed_number: '',
-    ward: '',
-    admission_reason: '',
-    initial_condition: '',
-    ipd_status: 'admitted',
     discharge_date: '',
-    discharge_time: '',
-    discharge_outcome: '',
-    days_hospitalized: '',
-    total_charges: '',
-    follow_up_date: '',
+    daily_observations: [],
     remarks: '',
   };
 
