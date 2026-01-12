@@ -3118,6 +3118,1260 @@ async def generate_gva_pdf(
 
 # ============ MAIN APP SETUP ============
 
+# ============ RATION CALCULATOR & KNOWLEDGE CENTER MODELS ============
+
+class FeedCategory(str, Enum):
+    GREEN_FODDER_LEGUME = "green_fodder_legume"
+    GREEN_FODDER_NON_LEGUME = "green_fodder_non_legume"
+    TREE_FODDER = "tree_fodder"
+    DRY_FODDER = "dry_fodder"
+    CONCENTRATES = "concentrates"
+    OIL_CAKES = "oil_cakes"
+    BRANS = "brans"
+    GRAINS = "grains"
+    AGRO_INDUSTRIAL = "agro_industrial"
+    MINERALS = "minerals"
+    SUPPLEMENTS = "supplements"
+
+class DiagnosticCategory(str, Enum):
+    CBC = "cbc"
+    BIOCHEMISTRY = "biochemistry"
+    BLOOD_PARASITES = "blood_parasites"
+    BRUCELLOSIS = "brucellosis"
+    FMD_ANTIBODY = "fmd_antibody"
+    PREGNANCY = "pregnancy"
+    MINERAL_PROFILE = "mineral_profile"
+    HORMONES = "hormones"
+    FECAL = "fecal"
+    MILK_TEST = "milk_test"
+    URINE_TEST = "urine_test"
+    NASAL = "nasal"
+    SKIN_SCRAPING = "skin_scraping"
+
+class DiseaseNature(str, Enum):
+    NORMAL = "normal"
+    ZOONOTIC = "zoonotic"
+    NOTIFIABLE = "notifiable"
+    EMERGENCY = "emergency"
+
+class RiskLevel(str, Enum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+# --- Feed Item Master Model ---
+class FeedItemBase(BaseModel):
+    name: str
+    local_name: Optional[str] = None
+    category: str
+    applicable_species: List[str]  # Which species can use this feed
+    dm_percentage: float  # Dry Matter %
+    cp_percentage: float  # Crude Protein %
+    dcp_percentage: Optional[float] = None  # Digestible Crude Protein %
+    tdn_percentage: Optional[float] = None  # Total Digestible Nutrients %
+    me_mcal: Optional[float] = None  # Metabolizable Energy (Mcal/kg)
+    ndf_percentage: Optional[float] = None  # Neutral Detergent Fiber %
+    adf_percentage: Optional[float] = None  # Acid Detergent Fiber %
+    calcium_percentage: Optional[float] = None
+    phosphorus_percentage: Optional[float] = None
+    default_price_per_kg: Optional[float] = None
+    max_inclusion_percentage: Optional[float] = None  # Safety limit
+    warnings: Optional[List[str]] = []
+    contraindicated_species: Optional[List[str]] = []
+    is_toxic: bool = False
+    toxicity_notes: Optional[str] = None
+    is_active: bool = True
+
+class FeedItemCreate(FeedItemBase):
+    pass
+
+class FeedItemResponse(FeedItemBase):
+    id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+    version: int = 1
+
+# --- Species Nutrition Rules Model ---
+class SpeciesNutritionRuleBase(BaseModel):
+    species: str
+    physiological_status: str  # e.g., "calf", "growing", "pregnant", "lactating_low", etc.
+    dm_percentage_bw: float  # DM as % of body weight
+    cp_requirement_percentage: float
+    tdn_requirement_percentage: Optional[float] = None
+    me_requirement_mcal: Optional[float] = None  # For dogs/cats
+    roughage_min_percentage: Optional[float] = None
+    concentrate_max_percentage: Optional[float] = None
+    grain_max_percentage: Optional[float] = None  # For horses - colic prevention
+    milk_allowance_dm_per_litre: Optional[float] = None  # Extra DM per litre milk
+    pregnancy_surge_percentage: Optional[float] = None
+    special_notes: Optional[str] = None
+    is_active: bool = True
+
+class SpeciesNutritionRuleCreate(SpeciesNutritionRuleBase):
+    pass
+
+class SpeciesNutritionRuleResponse(SpeciesNutritionRuleBase):
+    id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+    version: int = 1
+
+# --- Diagnostic Test Master Model ---
+class DiagnosticTestBase(BaseModel):
+    name: str
+    category: str  # DiagnosticCategory
+    sample_type: str  # blood, dung, milk, urine, nasal, skin
+    applicable_species: List[str]
+    purpose: str
+    disease_nature: str = "normal"  # normal, zoonotic, notifiable, emergency
+    parameters: List[Dict[str, Any]]  # List of parameters with normal ranges
+    interpretation_rules: Optional[Dict[str, Any]] = None  # Backend logic
+    safety_block: Optional[Dict[str, Any]] = None  # Zoonotic/emergency info
+    is_active: bool = True
+
+class DiagnosticTestCreate(DiagnosticTestBase):
+    pass
+
+class DiagnosticTestResponse(DiagnosticTestBase):
+    id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+    version: int = 1
+
+# --- Normal Range Model ---
+class NormalRangeBase(BaseModel):
+    test_id: str
+    parameter_name: str
+    unit: str
+    species: str
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    reference_text: Optional[str] = None
+    interpretation_high: Optional[str] = None
+    interpretation_low: Optional[str] = None
+    clinical_notes: Optional[str] = None
+
+class NormalRangeCreate(NormalRangeBase):
+    pass
+
+class NormalRangeResponse(NormalRangeBase):
+    id: str
+    created_by: str
+    created_at: str
+    updated_at: str
+
+# --- Ration Calculation Request/Response ---
+class RationCalculationRequest(BaseModel):
+    species: str
+    body_weight_kg: float
+    physiological_status: str
+    milk_yield_liters: Optional[float] = None
+    selected_feeds: List[str]  # List of feed IDs
+    feed_prices: Optional[Dict[str, float]] = None  # Optional custom prices
+
+class RationCalculationResponse(BaseModel):
+    id: str
+    species: str
+    body_weight_kg: float
+    physiological_status: str
+    milk_yield_liters: Optional[float]
+    dm_required_kg: float
+    cp_required_g: float
+    tdn_required_kg: Optional[float]
+    suggested_ration: List[Dict[str, Any]]  # Feed quantities
+    total_dm_provided_kg: float
+    total_cp_provided_g: float
+    total_tdn_provided_kg: Optional[float]
+    protein_status: str  # "adequate", "deficient", "excess"
+    energy_status: str
+    daily_feed_cost: float
+    cost_per_litre_milk: Optional[float]
+    warnings: List[str]
+    advice: List[str]
+    nutrition_version_id: str
+    calculated_at: str
+    calculated_by: str
+    user_role: str
+    is_offline: bool = False
+
+# --- Diagnostic Test Entry & Result ---
+class DiagnosticEntryRequest(BaseModel):
+    test_id: str
+    animal_tag: Optional[str] = None
+    species: str
+    farmer_name: Optional[str] = None
+    farmer_village: Optional[str] = None
+    clinical_signs: Optional[Dict[str, bool]] = None
+    parameter_values: Dict[str, float]  # Parameter name -> value
+
+class DiagnosticResultResponse(BaseModel):
+    id: str
+    test_id: str
+    test_name: str
+    animal_tag: Optional[str]
+    species: str
+    farmer_name: Optional[str]
+    parameter_results: List[Dict[str, Any]]  # Each param with value, status, interpretation
+    overall_interpretation: str
+    likely_conditions: List[str]
+    risk_level: str
+    suggested_actions: List[str]
+    special_symptoms_to_check: List[str]
+    safety_warnings: Optional[List[str]] = None
+    is_zoonotic: bool = False
+    is_notifiable: bool = False
+    created_at: str
+    created_by: str
+    user_role: str
+
+# ============ RATION CALCULATOR - ADMIN ROUTES ============
+
+@api_router.get("/admin/feed-items", response_model=List[FeedItemResponse])
+async def get_feed_items(
+    category: Optional[str] = None,
+    species: Optional[str] = None,
+    is_active: Optional[bool] = True,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get all feed items - Admin can edit, others read-only"""
+    query = {}
+    if category:
+        query["category"] = category
+    if species:
+        query["applicable_species"] = species
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    items = await db.feed_items.find(query, {"_id": 0}).to_list(1000)
+    return [FeedItemResponse(**item) for item in items]
+
+@api_router.post("/admin/feed-items", response_model=FeedItemResponse)
+async def create_feed_item(
+    item: FeedItemCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create feed item - Admin only"""
+    item_dict = item.model_dump()
+    item_dict["id"] = str(uuid.uuid4())
+    item_dict["created_by"] = user["id"]
+    item_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    item_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    item_dict["version"] = 1
+    
+    await db.feed_items.insert_one(item_dict)
+    
+    # Audit log
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "role": user["role"],
+        "action": "create",
+        "target_type": "feed_item",
+        "target_id": item_dict["id"],
+        "after_value": item_dict,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    if "_id" in item_dict:
+        del item_dict["_id"]
+    return FeedItemResponse(**item_dict)
+
+@api_router.put("/admin/feed-items/{item_id}", response_model=FeedItemResponse)
+async def update_feed_item(
+    item_id: str,
+    item: FeedItemCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update feed item - Admin only, creates new version"""
+    existing = await db.feed_items.find_one({"id": item_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Feed item not found")
+    
+    # Archive old version
+    old_version = {**existing, "archived_at": datetime.now(timezone.utc).isoformat()}
+    if "_id" in old_version:
+        del old_version["_id"]
+    await db.feed_items_archive.insert_one(old_version)
+    
+    update_dict = item.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["version"] = existing.get("version", 1) + 1
+    
+    await db.feed_items.update_one({"id": item_id}, {"$set": update_dict})
+    
+    # Audit log
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "role": user["role"],
+        "action": "update",
+        "target_type": "feed_item",
+        "target_id": item_id,
+        "before_value": {k: v for k, v in existing.items() if k != "_id"},
+        "after_value": update_dict,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    updated = await db.feed_items.find_one({"id": item_id}, {"_id": 0})
+    return FeedItemResponse(**updated)
+
+@api_router.get("/admin/nutrition-rules", response_model=List[SpeciesNutritionRuleResponse])
+async def get_nutrition_rules(
+    species: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get species nutrition rules"""
+    query = {"is_active": True}
+    if species:
+        query["species"] = species
+    
+    rules = await db.nutrition_rules.find(query, {"_id": 0}).to_list(1000)
+    return [SpeciesNutritionRuleResponse(**rule) for rule in rules]
+
+@api_router.post("/admin/nutrition-rules", response_model=SpeciesNutritionRuleResponse)
+async def create_nutrition_rule(
+    rule: SpeciesNutritionRuleCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create nutrition rule - Admin only"""
+    rule_dict = rule.model_dump()
+    rule_dict["id"] = str(uuid.uuid4())
+    rule_dict["created_by"] = user["id"]
+    rule_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    rule_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    rule_dict["version"] = 1
+    
+    await db.nutrition_rules.insert_one(rule_dict)
+    
+    if "_id" in rule_dict:
+        del rule_dict["_id"]
+    return SpeciesNutritionRuleResponse(**rule_dict)
+
+@api_router.put("/admin/nutrition-rules/{rule_id}", response_model=SpeciesNutritionRuleResponse)
+async def update_nutrition_rule(
+    rule_id: str,
+    rule: SpeciesNutritionRuleCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update nutrition rule - Admin only"""
+    existing = await db.nutrition_rules.find_one({"id": rule_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Nutrition rule not found")
+    
+    # Archive old version
+    old_version = {**existing, "archived_at": datetime.now(timezone.utc).isoformat()}
+    if "_id" in old_version:
+        del old_version["_id"]
+    await db.nutrition_rules_archive.insert_one(old_version)
+    
+    update_dict = rule.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["version"] = existing.get("version", 1) + 1
+    
+    await db.nutrition_rules.update_one({"id": rule_id}, {"$set": update_dict})
+    
+    updated = await db.nutrition_rules.find_one({"id": rule_id}, {"_id": 0})
+    return SpeciesNutritionRuleResponse(**updated)
+
+# ============ RATION CALCULATOR - CALCULATION ENGINE ============
+
+async def calculate_ration_internal(request: RationCalculationRequest, user: dict) -> Dict[str, Any]:
+    """Internal ration calculation engine - species-specific logic"""
+    species = request.species
+    body_weight = request.body_weight_kg
+    status = request.physiological_status
+    milk_yield = request.milk_yield_liters or 0
+    
+    # Get nutrition rule for this species and status
+    rule = await db.nutrition_rules.find_one({
+        "species": species,
+        "physiological_status": status,
+        "is_active": True
+    }, {"_id": 0})
+    
+    if not rule:
+        # Default calculation if no specific rule
+        rule = {
+            "dm_percentage_bw": 3.0,
+            "cp_requirement_percentage": 12,
+            "tdn_requirement_percentage": 60,
+            "roughage_min_percentage": 60,
+            "concentrate_max_percentage": 40,
+            "milk_allowance_dm_per_litre": 0.4
+        }
+    
+    # Calculate base requirements
+    dm_required = body_weight * (rule["dm_percentage_bw"] / 100)
+    
+    # Add milk allowance for lactating animals
+    if milk_yield > 0 and rule.get("milk_allowance_dm_per_litre"):
+        dm_required += milk_yield * rule["milk_allowance_dm_per_litre"]
+    
+    cp_required_g = dm_required * rule["cp_requirement_percentage"] * 10  # Convert to grams
+    tdn_required = dm_required * (rule.get("tdn_requirement_percentage", 60) / 100)
+    
+    # Get selected feeds
+    feeds = await db.feed_items.find({
+        "id": {"$in": request.selected_feeds},
+        "is_active": True
+    }, {"_id": 0}).to_list(100)
+    
+    if not feeds:
+        raise HTTPException(status_code=400, detail="No valid feeds selected")
+    
+    # Simple ration formulation (can be enhanced with linear programming)
+    suggested_ration = []
+    total_dm = 0
+    total_cp = 0
+    total_tdn = 0
+    total_cost = 0
+    warnings = []
+    advice = []
+    
+    roughage_feeds = [f for f in feeds if f["category"] in ["green_fodder_legume", "green_fodder_non_legume", "dry_fodder", "tree_fodder"]]
+    concentrate_feeds = [f for f in feeds if f["category"] in ["concentrates", "oil_cakes", "brans", "grains"]]
+    mineral_feeds = [f for f in feeds if f["category"] in ["minerals", "supplements"]]
+    
+    # Calculate roughage portion (60-70% of DM typically)
+    roughage_dm_target = dm_required * (rule.get("roughage_min_percentage", 60) / 100)
+    concentrate_dm_target = dm_required - roughage_dm_target
+    
+    # Distribute among roughages
+    if roughage_feeds:
+        per_roughage_dm = roughage_dm_target / len(roughage_feeds)
+        for feed in roughage_feeds:
+            as_fed_kg = per_roughage_dm / (feed["dm_percentage"] / 100)
+            price = request.feed_prices.get(feed["id"], feed.get("default_price_per_kg", 0)) if request.feed_prices else feed.get("default_price_per_kg", 0)
+            cost = as_fed_kg * price
+            
+            dm_from_feed = per_roughage_dm
+            cp_from_feed = dm_from_feed * feed["cp_percentage"] * 10
+            tdn_from_feed = dm_from_feed * (feed.get("tdn_percentage", 50) / 100)
+            
+            suggested_ration.append({
+                "feed_id": feed["id"],
+                "feed_name": feed["name"],
+                "category": feed["category"],
+                "quantity_kg": round(as_fed_kg, 2),
+                "dm_kg": round(dm_from_feed, 2),
+                "cp_g": round(cp_from_feed, 1),
+                "tdn_kg": round(tdn_from_feed, 2),
+                "cost": round(cost, 2)
+            })
+            
+            total_dm += dm_from_feed
+            total_cp += cp_from_feed
+            total_tdn += tdn_from_feed
+            total_cost += cost
+            
+            # Check for warnings
+            if feed.get("warnings"):
+                warnings.extend(feed["warnings"])
+    
+    # Distribute among concentrates
+    if concentrate_feeds and concentrate_dm_target > 0:
+        per_concentrate_dm = concentrate_dm_target / len(concentrate_feeds)
+        for feed in concentrate_feeds:
+            # Check max inclusion
+            max_inclusion = feed.get("max_inclusion_percentage")
+            if max_inclusion:
+                max_dm = dm_required * (max_inclusion / 100)
+                per_concentrate_dm = min(per_concentrate_dm, max_dm)
+            
+            as_fed_kg = per_concentrate_dm / (feed["dm_percentage"] / 100)
+            price = request.feed_prices.get(feed["id"], feed.get("default_price_per_kg", 0)) if request.feed_prices else feed.get("default_price_per_kg", 0)
+            cost = as_fed_kg * price
+            
+            dm_from_feed = per_concentrate_dm
+            cp_from_feed = dm_from_feed * feed["cp_percentage"] * 10
+            tdn_from_feed = dm_from_feed * (feed.get("tdn_percentage", 70) / 100)
+            
+            suggested_ration.append({
+                "feed_id": feed["id"],
+                "feed_name": feed["name"],
+                "category": feed["category"],
+                "quantity_kg": round(as_fed_kg, 2),
+                "dm_kg": round(dm_from_feed, 2),
+                "cp_g": round(cp_from_feed, 1),
+                "tdn_kg": round(tdn_from_feed, 2),
+                "cost": round(cost, 2)
+            })
+            
+            total_dm += dm_from_feed
+            total_cp += cp_from_feed
+            total_tdn += tdn_from_feed
+            total_cost += cost
+    
+    # Add minerals (fixed amount)
+    for feed in mineral_feeds:
+        quantity = 0.05 if "salt" in feed["name"].lower() else 0.03  # 50g salt, 30g mineral mix
+        price = request.feed_prices.get(feed["id"], feed.get("default_price_per_kg", 0)) if request.feed_prices else feed.get("default_price_per_kg", 0)
+        cost = quantity * price
+        
+        suggested_ration.append({
+            "feed_id": feed["id"],
+            "feed_name": feed["name"],
+            "category": feed["category"],
+            "quantity_kg": round(quantity, 3),
+            "dm_kg": round(quantity, 3),
+            "cp_g": 0,
+            "tdn_kg": 0,
+            "cost": round(cost, 2)
+        })
+        total_cost += cost
+    
+    # Determine status
+    protein_status = "adequate"
+    if total_cp < cp_required_g * 0.9:
+        protein_status = "deficient"
+        advice.append("Protein is deficient. Consider adding more protein-rich concentrates like oil cakes.")
+    elif total_cp > cp_required_g * 1.2:
+        protein_status = "excess"
+        advice.append("Protein is in excess. This may increase costs without benefit.")
+    
+    energy_status = "adequate"
+    if total_tdn < tdn_required * 0.9:
+        energy_status = "deficient"
+        advice.append("Energy is deficient. Consider adding more energy-rich feeds.")
+    elif total_tdn > tdn_required * 1.2:
+        energy_status = "excess"
+    
+    cost_per_litre = round(total_cost / milk_yield, 2) if milk_yield > 0 else None
+    
+    # Get current nutrition version
+    version_doc = await db.nutrition_versions.find_one({"is_current": True}, {"_id": 0})
+    version_id = version_doc["id"] if version_doc else "default"
+    
+    result = {
+        "id": str(uuid.uuid4()),
+        "species": species,
+        "body_weight_kg": body_weight,
+        "physiological_status": status,
+        "milk_yield_liters": milk_yield,
+        "dm_required_kg": round(dm_required, 2),
+        "cp_required_g": round(cp_required_g, 1),
+        "tdn_required_kg": round(tdn_required, 2),
+        "suggested_ration": suggested_ration,
+        "total_dm_provided_kg": round(total_dm, 2),
+        "total_cp_provided_g": round(total_cp, 1),
+        "total_tdn_provided_kg": round(total_tdn, 2),
+        "protein_status": protein_status,
+        "energy_status": energy_status,
+        "daily_feed_cost": round(total_cost, 2),
+        "cost_per_litre_milk": cost_per_litre,
+        "warnings": warnings,
+        "advice": advice,
+        "nutrition_version_id": version_id,
+        "calculated_at": datetime.now(timezone.utc).isoformat(),
+        "calculated_by": user["id"],
+        "user_role": user["role"],
+        "is_offline": False
+    }
+    
+    # Store calculation for audit
+    await db.ration_calculations.insert_one(result)
+    
+    return result
+
+@api_router.post("/ration/calculate", response_model=RationCalculationResponse)
+async def calculate_ration(
+    request: RationCalculationRequest,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET, UserRole.FARMER]))
+):
+    """Calculate ration for any species"""
+    result = await calculate_ration_internal(request, user)
+    if "_id" in result:
+        del result["_id"]
+    return RationCalculationResponse(**result)
+
+@api_router.get("/ration/calculations", response_model=List[RationCalculationResponse])
+async def get_ration_calculations(
+    species: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Get ration calculation history - Admin only for full audit"""
+    query = {}
+    if species:
+        query["species"] = species
+    
+    calculations = await db.ration_calculations.find(query, {"_id": 0}).sort("calculated_at", -1).limit(limit).to_list(limit)
+    return [RationCalculationResponse(**calc) for calc in calculations]
+
+# ============ KNOWLEDGE CENTER - DIAGNOSTIC TESTS ROUTES ============
+
+@api_router.get("/admin/diagnostic-tests", response_model=List[DiagnosticTestResponse])
+async def get_diagnostic_tests(
+    category: Optional[str] = None,
+    species: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get diagnostic tests - All roles can view"""
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    if species:
+        query["applicable_species"] = species
+    
+    tests = await db.diagnostic_tests.find(query, {"_id": 0}).to_list(1000)
+    return [DiagnosticTestResponse(**test) for test in tests]
+
+@api_router.post("/admin/diagnostic-tests", response_model=DiagnosticTestResponse)
+async def create_diagnostic_test(
+    test: DiagnosticTestCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create diagnostic test - Admin only"""
+    test_dict = test.model_dump()
+    test_dict["id"] = str(uuid.uuid4())
+    test_dict["created_by"] = user["id"]
+    test_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    test_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    test_dict["version"] = 1
+    
+    await db.diagnostic_tests.insert_one(test_dict)
+    
+    # Audit log
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "role": user["role"],
+        "action": "create",
+        "target_type": "diagnostic_test",
+        "target_id": test_dict["id"],
+        "after_value": {k: v for k, v in test_dict.items() if k != "_id"},
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    if "_id" in test_dict:
+        del test_dict["_id"]
+    return DiagnosticTestResponse(**test_dict)
+
+@api_router.put("/admin/diagnostic-tests/{test_id}", response_model=DiagnosticTestResponse)
+async def update_diagnostic_test(
+    test_id: str,
+    test: DiagnosticTestCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update diagnostic test - Admin only, creates new version"""
+    existing = await db.diagnostic_tests.find_one({"id": test_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Diagnostic test not found")
+    
+    # Archive old version
+    old_version = {**existing, "archived_at": datetime.now(timezone.utc).isoformat()}
+    if "_id" in old_version:
+        del old_version["_id"]
+    await db.diagnostic_tests_archive.insert_one(old_version)
+    
+    update_dict = test.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_dict["version"] = existing.get("version", 1) + 1
+    
+    await db.diagnostic_tests.update_one({"id": test_id}, {"$set": update_dict})
+    
+    # Audit log
+    await db.audit_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "user_name": user["name"],
+        "role": user["role"],
+        "action": "update",
+        "target_type": "diagnostic_test",
+        "target_id": test_id,
+        "before_value": {k: v for k, v in existing.items() if k != "_id"},
+        "after_value": update_dict,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    updated = await db.diagnostic_tests.find_one({"id": test_id}, {"_id": 0})
+    return DiagnosticTestResponse(**updated)
+
+@api_router.get("/admin/normal-ranges", response_model=List[NormalRangeResponse])
+async def get_normal_ranges(
+    test_id: Optional[str] = None,
+    species: Optional[str] = None,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get normal ranges for diagnostic tests"""
+    query = {}
+    if test_id:
+        query["test_id"] = test_id
+    if species:
+        query["species"] = species
+    
+    ranges = await db.normal_ranges.find(query, {"_id": 0}).to_list(1000)
+    return [NormalRangeResponse(**r) for r in ranges]
+
+@api_router.post("/admin/normal-ranges", response_model=NormalRangeResponse)
+async def create_normal_range(
+    range_data: NormalRangeCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Create normal range - Admin only"""
+    range_dict = range_data.model_dump()
+    range_dict["id"] = str(uuid.uuid4())
+    range_dict["created_by"] = user["id"]
+    range_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+    range_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.normal_ranges.insert_one(range_dict)
+    
+    if "_id" in range_dict:
+        del range_dict["_id"]
+    return NormalRangeResponse(**range_dict)
+
+@api_router.put("/admin/normal-ranges/{range_id}", response_model=NormalRangeResponse)
+async def update_normal_range(
+    range_id: str,
+    range_data: NormalRangeCreate,
+    user: dict = Depends(require_role([UserRole.ADMIN]))
+):
+    """Update normal range - Admin only"""
+    existing = await db.normal_ranges.find_one({"id": range_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Normal range not found")
+    
+    update_dict = range_data.model_dump()
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.normal_ranges.update_one({"id": range_id}, {"$set": update_dict})
+    
+    updated = await db.normal_ranges.find_one({"id": range_id}, {"_id": 0})
+    return NormalRangeResponse(**updated)
+
+# ============ DIAGNOSTIC INTERPRETATION ENGINE ============
+
+async def interpret_diagnostic(entry: DiagnosticEntryRequest, user: dict) -> Dict[str, Any]:
+    """Interpret diagnostic test results"""
+    test = await db.diagnostic_tests.find_one({"id": entry.test_id, "is_active": True}, {"_id": 0})
+    if not test:
+        raise HTTPException(status_code=404, detail="Diagnostic test not found")
+    
+    # Get normal ranges for this test and species
+    normal_ranges = await db.normal_ranges.find({
+        "test_id": entry.test_id,
+        "species": entry.species
+    }, {"_id": 0}).to_list(100)
+    
+    ranges_dict = {r["parameter_name"]: r for r in normal_ranges}
+    
+    parameter_results = []
+    abnormal_params = []
+    
+    for param_name, value in entry.parameter_values.items():
+        range_info = ranges_dict.get(param_name, {})
+        min_val = range_info.get("min_value")
+        max_val = range_info.get("max_value")
+        
+        status = "normal"
+        interpretation = ""
+        
+        if min_val is not None and value < min_val:
+            status = "low"
+            interpretation = range_info.get("interpretation_low", "Below normal range")
+            abnormal_params.append({"param": param_name, "status": "low", "value": value})
+        elif max_val is not None and value > max_val:
+            status = "high"
+            interpretation = range_info.get("interpretation_high", "Above normal range")
+            abnormal_params.append({"param": param_name, "status": "high", "value": value})
+        else:
+            interpretation = "Within normal limits"
+        
+        parameter_results.append({
+            "parameter": param_name,
+            "value": value,
+            "unit": range_info.get("unit", ""),
+            "normal_range": f"{min_val or '-'} - {max_val or '-'}",
+            "status": status,
+            "interpretation": interpretation
+        })
+    
+    # Determine overall interpretation
+    if not abnormal_params:
+        overall_interpretation = "All parameters within normal limits"
+        risk_level = "low"
+        likely_conditions = []
+    else:
+        overall_interpretation = f"{len(abnormal_params)} parameter(s) outside normal range"
+        risk_level = "moderate" if len(abnormal_params) <= 2 else "high"
+        likely_conditions = ["Requires further investigation"]
+    
+    # Check for zoonotic/emergency conditions
+    is_zoonotic = test.get("disease_nature") == "zoonotic"
+    is_notifiable = test.get("disease_nature") == "notifiable"
+    safety_warnings = []
+    
+    if is_zoonotic:
+        safety_warnings = [
+            "⚠️ ZOONOTIC DISEASE RISK - Use appropriate PPE",
+            "Isolate animal immediately",
+            "Report to authorities as required",
+            "Handle samples with extreme care"
+        ]
+        risk_level = "critical"
+    
+    suggested_actions = []
+    if risk_level == "low":
+        suggested_actions = ["Continue routine monitoring", "No immediate action required"]
+    elif risk_level == "moderate":
+        suggested_actions = ["Repeat test in 1-2 weeks", "Monitor clinical signs", "Consider additional tests"]
+    elif risk_level == "high":
+        suggested_actions = ["Immediate veterinary attention required", "Consider treatment protocol", "Isolate if infectious suspected"]
+    else:  # critical
+        suggested_actions = ["IMMEDIATE ACTION REQUIRED", "Contact veterinary authorities", "Implement biosecurity measures"]
+    
+    result = {
+        "id": str(uuid.uuid4()),
+        "test_id": entry.test_id,
+        "test_name": test["name"],
+        "animal_tag": entry.animal_tag,
+        "species": entry.species,
+        "farmer_name": entry.farmer_name,
+        "parameter_results": parameter_results,
+        "overall_interpretation": overall_interpretation,
+        "likely_conditions": likely_conditions,
+        "risk_level": risk_level,
+        "suggested_actions": suggested_actions,
+        "special_symptoms_to_check": test.get("safety_block", {}).get("symptoms_to_check", []),
+        "safety_warnings": safety_warnings if safety_warnings else None,
+        "is_zoonotic": is_zoonotic,
+        "is_notifiable": is_notifiable,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": user["id"],
+        "user_role": user["role"]
+    }
+    
+    # Store for audit
+    await db.diagnostic_results.insert_one(result)
+    
+    return result
+
+@api_router.post("/diagnostics/interpret", response_model=DiagnosticResultResponse)
+async def interpret_test(
+    entry: DiagnosticEntryRequest,
+    user: dict = Depends(require_role([UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Interpret diagnostic test results - Vet/Paravet only"""
+    result = await interpret_diagnostic(entry, user)
+    if "_id" in result:
+        del result["_id"]
+    return DiagnosticResultResponse(**result)
+
+@api_router.get("/diagnostics/results", response_model=List[DiagnosticResultResponse])
+async def get_diagnostic_results(
+    species: Optional[str] = None,
+    test_id: Optional[str] = None,
+    limit: int = 100,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get diagnostic results history"""
+    query = {}
+    if species:
+        query["species"] = species
+    if test_id:
+        query["test_id"] = test_id
+    
+    # Non-admin users only see their own results
+    if user["role"] not in ["admin"]:
+        query["created_by"] = user["id"]
+    
+    results = await db.diagnostic_results.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    return [DiagnosticResultResponse(**r) for r in results]
+
+@api_router.get("/diagnostics/results/{result_id}", response_model=DiagnosticResultResponse)
+async def get_diagnostic_result(
+    result_id: str,
+    user: dict = Depends(require_role([UserRole.ADMIN, UserRole.VETERINARIAN, UserRole.PARAVET]))
+):
+    """Get specific diagnostic result"""
+    result = await db.diagnostic_results.find_one({"id": result_id}, {"_id": 0})
+    if not result:
+        raise HTTPException(status_code=404, detail="Result not found")
+    return DiagnosticResultResponse(**result)
+
+# ============ SEED DATA ENDPOINT FOR INITIAL SETUP ============
+
+@api_router.post("/admin/seed-nutrition-data")
+async def seed_nutrition_data(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Seed initial feed items and nutrition rules - Admin only"""
+    
+    # Check if already seeded
+    existing_feeds = await db.feed_items.count_documents({})
+    if existing_feeds > 0:
+        return {"message": "Data already seeded", "feed_items": existing_feeds}
+    
+    # Seed Feed Items
+    feed_items = [
+        # Green Fodder - Legume
+        {"name": "Lucerne (Alfalfa)", "local_name": "Rijka", "category": "green_fodder_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel"], "dm_percentage": 22, "cp_percentage": 18, "dcp_percentage": 14, "tdn_percentage": 58, "default_price_per_kg": 4},
+        {"name": "Berseem", "local_name": "Berseem", "category": "green_fodder_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey"], "dm_percentage": 15, "cp_percentage": 17, "dcp_percentage": 13, "tdn_percentage": 60, "default_price_per_kg": 3},
+        {"name": "Cowpea Fodder", "local_name": "Lobia Chara", "category": "green_fodder_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 18, "cp_percentage": 16, "dcp_percentage": 12, "tdn_percentage": 55, "default_price_per_kg": 4},
+        
+        # Green Fodder - Non-Legume
+        {"name": "Napier Grass", "local_name": "Elephant Grass", "category": "green_fodder_non_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel"], "dm_percentage": 20, "cp_percentage": 8, "dcp_percentage": 5, "tdn_percentage": 55, "default_price_per_kg": 2},
+        {"name": "Maize Fodder", "local_name": "Makka Chara", "category": "green_fodder_non_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig"], "dm_percentage": 22, "cp_percentage": 9, "dcp_percentage": 6, "tdn_percentage": 62, "default_price_per_kg": 3},
+        {"name": "Sorghum Fodder", "local_name": "Jowar Chara", "category": "green_fodder_non_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 25, "cp_percentage": 7, "dcp_percentage": 4, "tdn_percentage": 58, "default_price_per_kg": 2, "warnings": ["May contain HCN in young plants"]},
+        {"name": "Bajra Fodder", "local_name": "Bajra Chara", "category": "green_fodder_non_legume", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "camel"], "dm_percentage": 24, "cp_percentage": 8, "dcp_percentage": 5, "tdn_percentage": 56, "default_price_per_kg": 2},
+        
+        # Tree Fodder
+        {"name": "Subabul Leaves", "local_name": "Subabul", "category": "tree_fodder", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 30, "cp_percentage": 24, "dcp_percentage": 18, "tdn_percentage": 55, "default_price_per_kg": 5, "max_inclusion_percentage": 30, "warnings": ["Limit to 30% of diet - contains mimosine"]},
+        {"name": "Neem Leaves", "local_name": "Neem Patti", "category": "tree_fodder", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "camel"], "dm_percentage": 35, "cp_percentage": 15, "dcp_percentage": 10, "tdn_percentage": 45, "default_price_per_kg": 2},
+        {"name": "Khejri Leaves", "local_name": "Khejri", "category": "tree_fodder", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "camel"], "dm_percentage": 40, "cp_percentage": 14, "dcp_percentage": 10, "tdn_percentage": 50, "default_price_per_kg": 3},
+        
+        # Dry Fodder
+        {"name": "Wheat Straw", "local_name": "Gehun Bhusa", "category": "dry_fodder", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel"], "dm_percentage": 90, "cp_percentage": 3, "dcp_percentage": 0, "tdn_percentage": 42, "default_price_per_kg": 4},
+        {"name": "Paddy Straw", "local_name": "Dhan Pual", "category": "dry_fodder", "applicable_species": ["cattle", "buffalo"], "dm_percentage": 90, "cp_percentage": 4, "dcp_percentage": 0, "tdn_percentage": 40, "default_price_per_kg": 3},
+        {"name": "Groundnut Hay", "local_name": "Moongfali Bhusa", "category": "dry_fodder", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 88, "cp_percentage": 10, "dcp_percentage": 6, "tdn_percentage": 52, "default_price_per_kg": 8},
+        
+        # Concentrates - Oil Cakes
+        {"name": "Groundnut Cake", "local_name": "Moongfali Khali", "category": "oil_cakes", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig"], "dm_percentage": 92, "cp_percentage": 45, "dcp_percentage": 40, "tdn_percentage": 78, "default_price_per_kg": 45},
+        {"name": "Mustard Cake", "local_name": "Sarson Khali", "category": "oil_cakes", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 90, "cp_percentage": 35, "dcp_percentage": 30, "tdn_percentage": 75, "default_price_per_kg": 35},
+        {"name": "Cotton Seed Cake", "local_name": "Binola Khali", "category": "oil_cakes", "applicable_species": ["cattle", "buffalo"], "dm_percentage": 92, "cp_percentage": 25, "dcp_percentage": 20, "tdn_percentage": 72, "default_price_per_kg": 30, "max_inclusion_percentage": 25, "warnings": ["Contains gossypol - limit for young animals"]},
+        {"name": "Soybean Meal", "local_name": "Soya Khali", "category": "oil_cakes", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "poultry", "dog", "cat"], "dm_percentage": 90, "cp_percentage": 48, "dcp_percentage": 44, "tdn_percentage": 82, "default_price_per_kg": 50},
+        
+        # Brans
+        {"name": "Wheat Bran", "local_name": "Chokar", "category": "brans", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey"], "dm_percentage": 88, "cp_percentage": 15, "dcp_percentage": 11, "tdn_percentage": 65, "default_price_per_kg": 18},
+        {"name": "Rice Bran", "local_name": "Rice Bran", "category": "brans", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig"], "dm_percentage": 90, "cp_percentage": 13, "dcp_percentage": 9, "tdn_percentage": 60, "default_price_per_kg": 15},
+        {"name": "De-oiled Rice Bran", "local_name": "DORB", "category": "brans", "applicable_species": ["cattle", "buffalo", "sheep", "goat"], "dm_percentage": 92, "cp_percentage": 15, "dcp_percentage": 10, "tdn_percentage": 55, "default_price_per_kg": 12},
+        
+        # Grains
+        {"name": "Maize Grain", "local_name": "Makka Dana", "category": "grains", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "poultry", "horse", "donkey"], "dm_percentage": 88, "cp_percentage": 9, "dcp_percentage": 7, "tdn_percentage": 80, "default_price_per_kg": 22},
+        {"name": "Barley", "local_name": "Jau", "category": "grains", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey"], "dm_percentage": 89, "cp_percentage": 11, "dcp_percentage": 8, "tdn_percentage": 75, "default_price_per_kg": 20},
+        {"name": "Oats", "local_name": "Jai", "category": "grains", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey"], "dm_percentage": 89, "cp_percentage": 12, "dcp_percentage": 9, "tdn_percentage": 70, "default_price_per_kg": 25},
+        
+        # Minerals
+        {"name": "Mineral Mixture", "local_name": "Mineral Mixture", "category": "minerals", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey", "camel"], "dm_percentage": 100, "cp_percentage": 0, "tdn_percentage": 0, "default_price_per_kg": 80, "calcium_percentage": 24, "phosphorus_percentage": 12},
+        {"name": "Common Salt", "local_name": "Namak", "category": "minerals", "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey", "camel", "dog", "cat"], "dm_percentage": 100, "cp_percentage": 0, "tdn_percentage": 0, "default_price_per_kg": 15},
+        
+        # Pet Food (Dog/Cat)
+        {"name": "Chicken Meal", "local_name": "Chicken Meal", "category": "concentrates", "applicable_species": ["dog", "cat"], "dm_percentage": 92, "cp_percentage": 65, "me_mcal": 3.5, "default_price_per_kg": 80},
+        {"name": "Fish Meal", "local_name": "Fish Meal", "category": "concentrates", "applicable_species": ["dog", "cat", "pig", "poultry"], "dm_percentage": 92, "cp_percentage": 60, "me_mcal": 3.2, "default_price_per_kg": 70},
+        {"name": "Rice (Cooked)", "local_name": "Chawal", "category": "grains", "applicable_species": ["dog", "cat"], "dm_percentage": 35, "cp_percentage": 3, "me_mcal": 1.3, "default_price_per_kg": 40},
+    ]
+    
+    for feed in feed_items:
+        feed["id"] = str(uuid.uuid4())
+        feed["created_by"] = user["id"]
+        feed["created_at"] = datetime.now(timezone.utc).isoformat()
+        feed["updated_at"] = datetime.now(timezone.utc).isoformat()
+        feed["version"] = 1
+        feed["is_active"] = True
+        if "warnings" not in feed:
+            feed["warnings"] = []
+        if "contraindicated_species" not in feed:
+            feed["contraindicated_species"] = []
+        feed["is_toxic"] = False
+    
+    await db.feed_items.insert_many(feed_items)
+    
+    # Seed Nutrition Rules
+    nutrition_rules = [
+        # Buffalo
+        {"species": "buffalo", "physiological_status": "calf", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 18, "tdn_requirement_percentage": 70, "roughage_min_percentage": 50, "concentrate_max_percentage": 50},
+        {"species": "buffalo", "physiological_status": "growing", "dm_percentage_bw": 3.0, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45},
+        {"species": "buffalo", "physiological_status": "heifer", "dm_percentage_bw": 2.8, "cp_requirement_percentage": 12, "tdn_requirement_percentage": 60, "roughage_min_percentage": 60, "concentrate_max_percentage": 40},
+        {"species": "buffalo", "physiological_status": "pregnant", "dm_percentage_bw": 3.2, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45, "pregnancy_surge_percentage": 15},
+        {"species": "buffalo", "physiological_status": "lactating_low", "dm_percentage_bw": 3.5, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45, "milk_allowance_dm_per_litre": 0.4},
+        {"species": "buffalo", "physiological_status": "lactating_medium", "dm_percentage_bw": 4.0, "cp_requirement_percentage": 16, "tdn_requirement_percentage": 68, "roughage_min_percentage": 50, "concentrate_max_percentage": 50, "milk_allowance_dm_per_litre": 0.4},
+        {"species": "buffalo", "physiological_status": "lactating_high", "dm_percentage_bw": 4.5, "cp_requirement_percentage": 18, "tdn_requirement_percentage": 70, "roughage_min_percentage": 45, "concentrate_max_percentage": 55, "milk_allowance_dm_per_litre": 0.45},
+        {"species": "buffalo", "physiological_status": "dry", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 55, "roughage_min_percentage": 70, "concentrate_max_percentage": 30},
+        
+        # Cattle (similar to buffalo with slight variations)
+        {"species": "cattle", "physiological_status": "calf", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 18, "tdn_requirement_percentage": 72, "roughage_min_percentage": 45, "concentrate_max_percentage": 55},
+        {"species": "cattle", "physiological_status": "growing", "dm_percentage_bw": 2.8, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 66, "roughage_min_percentage": 55, "concentrate_max_percentage": 45},
+        {"species": "cattle", "physiological_status": "lactating_low", "dm_percentage_bw": 3.2, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45, "milk_allowance_dm_per_litre": 0.35},
+        {"species": "cattle", "physiological_status": "lactating_high", "dm_percentage_bw": 4.0, "cp_requirement_percentage": 18, "tdn_requirement_percentage": 72, "roughage_min_percentage": 40, "concentrate_max_percentage": 60, "milk_allowance_dm_per_litre": 0.4},
+        
+        # Sheep
+        {"species": "sheep", "physiological_status": "maintenance", "dm_percentage_bw": 3.5, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 55, "roughage_min_percentage": 70, "concentrate_max_percentage": 30},
+        {"species": "sheep", "physiological_status": "pregnant", "dm_percentage_bw": 4.0, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 62, "roughage_min_percentage": 60, "concentrate_max_percentage": 40, "pregnancy_surge_percentage": 20},
+        {"species": "sheep", "physiological_status": "lactating", "dm_percentage_bw": 4.5, "cp_requirement_percentage": 16, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45},
+        
+        # Goat
+        {"species": "goat", "physiological_status": "maintenance", "dm_percentage_bw": 4.0, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 55, "roughage_min_percentage": 70, "concentrate_max_percentage": 30},
+        {"species": "goat", "physiological_status": "pregnant", "dm_percentage_bw": 4.5, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 62, "roughage_min_percentage": 60, "concentrate_max_percentage": 40, "pregnancy_surge_percentage": 25},
+        {"species": "goat", "physiological_status": "lactating", "dm_percentage_bw": 5.0, "cp_requirement_percentage": 16, "tdn_requirement_percentage": 65, "roughage_min_percentage": 55, "concentrate_max_percentage": 45},
+        
+        # Horse - with grain limits for colic prevention
+        {"species": "horse", "physiological_status": "maintenance", "dm_percentage_bw": 2.0, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 55, "roughage_min_percentage": 70, "concentrate_max_percentage": 30, "grain_max_percentage": 0.5, "special_notes": "Grain should not exceed 0.5% of BW per meal to prevent colic"},
+        {"species": "horse", "physiological_status": "working_light", "dm_percentage_bw": 2.2, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 60, "roughage_min_percentage": 65, "concentrate_max_percentage": 35, "grain_max_percentage": 0.5},
+        {"species": "horse", "physiological_status": "working_heavy", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 12, "tdn_requirement_percentage": 68, "roughage_min_percentage": 55, "concentrate_max_percentage": 45, "grain_max_percentage": 0.5},
+        
+        # Donkey
+        {"species": "donkey", "physiological_status": "maintenance", "dm_percentage_bw": 1.8, "cp_requirement_percentage": 8, "tdn_requirement_percentage": 50, "roughage_min_percentage": 80, "concentrate_max_percentage": 20, "special_notes": "Donkeys are efficient converters - prone to obesity"},
+        {"species": "donkey", "physiological_status": "working", "dm_percentage_bw": 2.2, "cp_requirement_percentage": 10, "tdn_requirement_percentage": 55, "roughage_min_percentage": 70, "concentrate_max_percentage": 30},
+        
+        # Camel - high roughage efficiency
+        {"species": "camel", "physiological_status": "maintenance", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 8, "tdn_requirement_percentage": 50, "roughage_min_percentage": 85, "concentrate_max_percentage": 15, "special_notes": "Camels have superior roughage digestion efficiency"},
+        {"species": "camel", "physiological_status": "lactating", "dm_percentage_bw": 3.5, "cp_requirement_percentage": 12, "tdn_requirement_percentage": 58, "roughage_min_percentage": 75, "concentrate_max_percentage": 25, "milk_allowance_dm_per_litre": 0.3},
+        
+        # Pig - CP-driven concentrate logic
+        {"species": "pig", "physiological_status": "grower", "dm_percentage_bw": 4.0, "cp_requirement_percentage": 18, "tdn_requirement_percentage": 75, "roughage_min_percentage": 10, "concentrate_max_percentage": 90, "special_notes": "Pigs are monogastric - high concentrate diet"},
+        {"species": "pig", "physiological_status": "finisher", "dm_percentage_bw": 3.5, "cp_requirement_percentage": 14, "tdn_requirement_percentage": 78, "roughage_min_percentage": 10, "concentrate_max_percentage": 90},
+        {"species": "pig", "physiological_status": "lactating_sow", "dm_percentage_bw": 5.0, "cp_requirement_percentage": 16, "tdn_requirement_percentage": 75, "roughage_min_percentage": 15, "concentrate_max_percentage": 85},
+        
+        # Dog - ME-based (Metabolizable Energy)
+        {"species": "dog", "physiological_status": "maintenance", "dm_percentage_bw": 2.5, "cp_requirement_percentage": 18, "me_requirement_mcal": 0.13, "roughage_min_percentage": 0, "concentrate_max_percentage": 100, "special_notes": "ME requirement = 130 kcal × BW^0.75"},
+        {"species": "dog", "physiological_status": "working", "dm_percentage_bw": 3.5, "cp_requirement_percentage": 25, "me_requirement_mcal": 0.18, "roughage_min_percentage": 0, "concentrate_max_percentage": 100},
+        {"species": "dog", "physiological_status": "lactating", "dm_percentage_bw": 4.5, "cp_requirement_percentage": 28, "me_requirement_mcal": 0.20, "roughage_min_percentage": 0, "concentrate_max_percentage": 100},
+        
+        # Cat - ME-based, obligate carnivore
+        {"species": "cat", "physiological_status": "maintenance", "dm_percentage_bw": 3.0, "cp_requirement_percentage": 26, "me_requirement_mcal": 0.08, "roughage_min_percentage": 0, "concentrate_max_percentage": 100, "special_notes": "Cats are obligate carnivores - require taurine"},
+        {"species": "cat", "physiological_status": "lactating", "dm_percentage_bw": 5.0, "cp_requirement_percentage": 35, "me_requirement_mcal": 0.12, "roughage_min_percentage": 0, "concentrate_max_percentage": 100},
+    ]
+    
+    for rule in nutrition_rules:
+        rule["id"] = str(uuid.uuid4())
+        rule["created_by"] = user["id"]
+        rule["created_at"] = datetime.now(timezone.utc).isoformat()
+        rule["updated_at"] = datetime.now(timezone.utc).isoformat()
+        rule["version"] = 1
+        rule["is_active"] = True
+    
+    await db.nutrition_rules.insert_many(nutrition_rules)
+    
+    # Create nutrition version
+    version = {
+        "id": str(uuid.uuid4()),
+        "version_name": "v1.0.0",
+        "description": "Initial ICAR-aligned nutrition data",
+        "is_current": True,
+        "published_by": user["id"],
+        "published_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.nutrition_versions.insert_one(version)
+    
+    return {
+        "message": "Nutrition data seeded successfully",
+        "feed_items": len(feed_items),
+        "nutrition_rules": len(nutrition_rules),
+        "version": version["version_name"]
+    }
+
+@api_router.post("/admin/seed-diagnostic-data")
+async def seed_diagnostic_data(user: dict = Depends(require_role([UserRole.ADMIN]))):
+    """Seed initial diagnostic tests and normal ranges - Admin only"""
+    
+    existing_tests = await db.diagnostic_tests.count_documents({})
+    if existing_tests > 0:
+        return {"message": "Data already seeded", "diagnostic_tests": existing_tests}
+    
+    # Seed Diagnostic Tests
+    diagnostic_tests = [
+        # CBC
+        {
+            "name": "Complete Blood Count (CBC)",
+            "category": "cbc",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey", "camel", "dog", "cat"],
+            "purpose": "Evaluate overall health, detect infections, anemia, and blood disorders",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "Hemoglobin", "unit": "g/dL"},
+                {"name": "PCV", "unit": "%"},
+                {"name": "RBC", "unit": "million/µL"},
+                {"name": "WBC", "unit": "thousand/µL"},
+                {"name": "Platelets", "unit": "thousand/µL"},
+                {"name": "Neutrophils", "unit": "%"},
+                {"name": "Lymphocytes", "unit": "%"},
+                {"name": "Monocytes", "unit": "%"},
+                {"name": "Eosinophils", "unit": "%"}
+            ]
+        },
+        # Biochemistry
+        {
+            "name": "Blood Biochemistry",
+            "category": "biochemistry",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey", "camel", "dog", "cat"],
+            "purpose": "Assess organ function, metabolic status, and nutritional state",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "Blood Glucose", "unit": "mg/dL"},
+                {"name": "BUN", "unit": "mg/dL"},
+                {"name": "Creatinine", "unit": "mg/dL"},
+                {"name": "Total Protein", "unit": "g/dL"},
+                {"name": "Albumin", "unit": "g/dL"},
+                {"name": "Globulin", "unit": "g/dL"},
+                {"name": "AST (SGOT)", "unit": "U/L"},
+                {"name": "ALT (SGPT)", "unit": "U/L"},
+                {"name": "ALP", "unit": "U/L"},
+                {"name": "Total Bilirubin", "unit": "mg/dL"}
+            ]
+        },
+        # Brucellosis - ZOONOTIC
+        {
+            "name": "Brucellosis Test (RBPT/ELISA)",
+            "category": "brucellosis",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "dog"],
+            "purpose": "Detect Brucella infection - ZOONOTIC DISEASE",
+            "disease_nature": "zoonotic",
+            "parameters": [
+                {"name": "RBPT", "unit": "result"},
+                {"name": "ELISA Titer", "unit": "ratio"}
+            ],
+            "safety_block": {
+                "ppe_required": ["Gloves", "Face mask", "Eye protection", "Lab coat"],
+                "isolation_required": True,
+                "milk_restriction": "Do not consume milk from positive animals",
+                "meat_restriction": "Meat should not enter food chain",
+                "government_reporting": True,
+                "symptoms_to_check": ["Abortion", "Retained placenta", "Orchitis", "Joint swelling", "Infertility"]
+            }
+        },
+        # FMD Antibody
+        {
+            "name": "FMD Antibody Test",
+            "category": "fmd_antibody",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig"],
+            "purpose": "Detect Foot and Mouth Disease antibodies - NOTIFIABLE DISEASE",
+            "disease_nature": "notifiable",
+            "parameters": [
+                {"name": "FMD NSP ELISA", "unit": "result"},
+                {"name": "Antibody Titer", "unit": "ratio"}
+            ],
+            "safety_block": {
+                "isolation_required": True,
+                "movement_restriction": True,
+                "government_reporting": True,
+                "symptoms_to_check": ["Vesicles on mouth", "Vesicles on feet", "Lameness", "Salivation", "Fever"]
+            }
+        },
+        # Pregnancy Test
+        {
+            "name": "Pregnancy Diagnosis",
+            "category": "pregnancy",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel", "dog", "cat"],
+            "purpose": "Confirm pregnancy status",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "PAG (Pregnancy Associated Glycoprotein)", "unit": "ng/mL"},
+                {"name": "Progesterone", "unit": "ng/mL"}
+            ]
+        },
+        # Mineral Profile
+        {
+            "name": "Mineral Profile",
+            "category": "mineral_profile",
+            "sample_type": "blood",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel"],
+            "purpose": "Assess mineral status and detect deficiencies",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "Calcium", "unit": "mg/dL"},
+                {"name": "Phosphorus", "unit": "mg/dL"},
+                {"name": "Magnesium", "unit": "mg/dL"},
+                {"name": "Copper", "unit": "µg/dL"},
+                {"name": "Zinc", "unit": "µg/dL"},
+                {"name": "Iron", "unit": "µg/dL"}
+            ]
+        },
+        # Fecal Examination
+        {
+            "name": "Fecal Examination (Parasitology)",
+            "category": "fecal",
+            "sample_type": "dung",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "pig", "horse", "donkey", "camel", "dog", "cat"],
+            "purpose": "Detect internal parasites",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "EPG (Eggs per gram)", "unit": "count"},
+                {"name": "Coccidia Oocysts", "unit": "OPG"},
+                {"name": "Strongyle eggs", "unit": "present/absent"},
+                {"name": "Fasciola eggs", "unit": "present/absent"},
+                {"name": "Amphistome eggs", "unit": "present/absent"}
+            ]
+        },
+        # Milk Test
+        {
+            "name": "Milk Quality Test",
+            "category": "milk_test",
+            "sample_type": "milk",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "camel"],
+            "purpose": "Assess milk quality and detect mastitis",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "SCC (Somatic Cell Count)", "unit": "cells/mL"},
+                {"name": "Fat", "unit": "%"},
+                {"name": "SNF", "unit": "%"},
+                {"name": "Protein", "unit": "%"},
+                {"name": "CMT Score", "unit": "score"}
+            ]
+        },
+        # Skin Scraping
+        {
+            "name": "Skin Scraping Examination",
+            "category": "skin_scraping",
+            "sample_type": "skin",
+            "applicable_species": ["cattle", "buffalo", "sheep", "goat", "horse", "donkey", "camel", "dog", "cat"],
+            "purpose": "Detect external parasites and fungal infections",
+            "disease_nature": "normal",
+            "parameters": [
+                {"name": "Sarcoptes mites", "unit": "present/absent"},
+                {"name": "Demodex mites", "unit": "present/absent"},
+                {"name": "Dermatophytes", "unit": "present/absent"},
+                {"name": "Lice", "unit": "present/absent"}
+            ]
+        }
+    ]
+    
+    for test in diagnostic_tests:
+        test["id"] = str(uuid.uuid4())
+        test["created_by"] = user["id"]
+        test["created_at"] = datetime.now(timezone.utc).isoformat()
+        test["updated_at"] = datetime.now(timezone.utc).isoformat()
+        test["version"] = 1
+        test["is_active"] = True
+    
+    await db.diagnostic_tests.insert_many(diagnostic_tests)
+    
+    # Seed Normal Ranges for CBC - Cattle/Buffalo
+    normal_ranges = []
+    
+    # CBC normal ranges for large ruminants
+    cbc_test_id = [t for t in diagnostic_tests if t["name"] == "Complete Blood Count (CBC)"][0]["id"]
+    
+    for species in ["cattle", "buffalo"]:
+        normal_ranges.extend([
+            {"test_id": cbc_test_id, "parameter_name": "Hemoglobin", "unit": "g/dL", "species": species, "min_value": 8, "max_value": 15, "interpretation_high": "Possible dehydration or polycythemia", "interpretation_low": "Anemia - check for parasites, hemorrhage, or nutritional deficiency"},
+            {"test_id": cbc_test_id, "parameter_name": "PCV", "unit": "%", "species": species, "min_value": 24, "max_value": 46, "interpretation_high": "Dehydration or stress", "interpretation_low": "Anemia"},
+            {"test_id": cbc_test_id, "parameter_name": "RBC", "unit": "million/µL", "species": species, "min_value": 5, "max_value": 10, "interpretation_high": "Polycythemia", "interpretation_low": "Anemia"},
+            {"test_id": cbc_test_id, "parameter_name": "WBC", "unit": "thousand/µL", "species": species, "min_value": 4, "max_value": 12, "interpretation_high": "Infection, inflammation, or stress", "interpretation_low": "Viral infection or bone marrow suppression"},
+            {"test_id": cbc_test_id, "parameter_name": "Platelets", "unit": "thousand/µL", "species": species, "min_value": 100, "max_value": 800, "interpretation_high": "Reactive thrombocytosis", "interpretation_low": "Risk of bleeding"},
+        ])
+    
+    # CBC for dogs
+    normal_ranges.extend([
+        {"test_id": cbc_test_id, "parameter_name": "Hemoglobin", "unit": "g/dL", "species": "dog", "min_value": 12, "max_value": 18, "interpretation_high": "Dehydration", "interpretation_low": "Anemia"},
+        {"test_id": cbc_test_id, "parameter_name": "PCV", "unit": "%", "species": "dog", "min_value": 37, "max_value": 55, "interpretation_high": "Dehydration", "interpretation_low": "Anemia"},
+        {"test_id": cbc_test_id, "parameter_name": "WBC", "unit": "thousand/µL", "species": "dog", "min_value": 6, "max_value": 17, "interpretation_high": "Infection or inflammation", "interpretation_low": "Viral infection"},
+    ])
+    
+    for range_item in normal_ranges:
+        range_item["id"] = str(uuid.uuid4())
+        range_item["created_by"] = user["id"]
+        range_item["created_at"] = datetime.now(timezone.utc).isoformat()
+        range_item["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.normal_ranges.insert_many(normal_ranges)
+    
+    return {
+        "message": "Diagnostic data seeded successfully",
+        "diagnostic_tests": len(diagnostic_tests),
+        "normal_ranges": len(normal_ranges)
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
