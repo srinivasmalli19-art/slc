@@ -260,11 +260,25 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 
 ## Prioritized Backlog
 
-### P1 - High Priority (Next - Batch 3)
+### P0 - Ration Calculator & Knowledge Center (Phase 2 - Next)
+- [ ] **Ration Calculator User Interface** - Vet/Paravet/Farmer screens to use calculator
+- [ ] **Normal Ranges Admin UI** - Full CRUD for species-specific normal ranges
+- [ ] **Nutrition Rules Admin UI** - Full CRUD for ICAR-aligned rules
+- [ ] **Diagnostic Entry Screens** - Vet/Paravet data entry with auto-validation
+- [ ] **PDF Generation** - Ration reports and diagnostic reports
+
+### P1 - High Priority (Vet Batch 3)
 - [ ] **IPD Register** - Admission/discharge tracking with bed numbers
 - [ ] **Vaccination Register** - Large/Small Animals with species-specific vaccines
 - [ ] **Deworming Register** - Drug selection, due date tracking
 - [ ] **AI Register** - Artificial Insemination multi-tab records
+
+### ✅ COMPLETED - Ration Calculator Phase 1 (January 12, 2026)
+- [x] **Feed Items Master** - 28 feeds with full nutrient tables, Admin CRUD
+- [x] **Diagnostic Tests Master** - 9 tests with parameters, Admin CRUD
+- [x] **Backend Calculation Engine** - Species-specific ration formulation
+- [x] **Backend Interpretation Engine** - Diagnostic auto-interpretation
+- [x] **Seed Data** - Initial ICAR-aligned nutrition data and diagnostic tests
 
 ### ✅ COMPLETED - Batch 2 (January 11, 2026)
 - [x] **Surgical Case Register** - Surgery types (13 options), anesthesia (6 types), outcomes (6 options)
@@ -272,11 +286,7 @@ Build & Deploy: SMART LIVESTOCK CARE (SLC) - A government-grade, professional li
 - [x] **Castration Register** - Methods (5 options), body weight, anesthesia tracking
 - [x] **GVA & Economic Analysis** - Calculation engine, results breakdown, PDF download
 
-### P2 - GVA & Analytics (Batch 3 - Critical)
-- [ ] **GVA Calculation Engine** - Milk, Meat, Egg calculations (admin-configurable percentages)
-- [ ] **Village GVA Report** - Combined report with PDF download
-- [ ] **Stock Registers** - Biological, Medicine, Feed with batch/expiry tracking
-- [ ] **Distribution Registers** - Feed/Seed with auto stock deduction
+### P2 - Stock & Distribution (Batch 4)
 
 ### P3 - Legal & Compliance (Batch 4)
 - [ ] **Post-Mortem Register & Certificate** - Step-wise form with PDF
