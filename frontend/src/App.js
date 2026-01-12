@@ -44,6 +44,10 @@ import VaccinationRegister from '@/components/pages/vet/VaccinationRegister';
 import DewormingRegister from '@/components/pages/vet/DewormingRegister';
 import AIRegister from '@/components/pages/vet/AIRegister';
 import CalfBirthRegister from '@/components/pages/vet/CalfBirthRegister';
+import OutbreakRegister from '@/components/pages/vet/OutbreakRegister';
+import MortalityRegister from '@/components/pages/vet/MortalityRegister';
+import IPDRegister from '@/components/pages/vet/IPDRegister';
+import PostMortemRegister from '@/components/pages/vet/PostMortemRegister';
 
 // Pages - Admin
 import AdminDashboard from '@/components/pages/admin/AdminDashboard';
