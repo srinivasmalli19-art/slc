@@ -200,10 +200,10 @@ function AppRoutes() {
         <Route path="castration" element={<CastrationRegister />} />
         
         {/* Preventive & Breeding */}
-        <Route path="vaccination-register" element={<PlaceholderPage title="Vaccination Register" />} />
-        <Route path="deworming-register" element={<PlaceholderPage title="Deworming Register" />} />
-        <Route path="ai-register" element={<PlaceholderPage title="AI Register" description="Artificial Insemination records" />} />
-        <Route path="calf-birth" element={<PlaceholderPage title="Calf Birth Register" />} />
+        <Route path="vaccination-register" element={<VaccinationRegister />} />
+        <Route path="deworming-register" element={<DewormingRegister />} />
+        <Route path="ai-register" element={<AIRegister />} />
+        <Route path="calf-birth" element={<CalfBirthRegister />} />
         
         {/* Disease & Mortality */}
         <Route path="outbreak" element={<PlaceholderPage title="Outbreak Register" />} />
