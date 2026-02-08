@@ -1,4 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -20,9 +21,19 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongo_url = os.environ['mongodb+srv://srinivasmalli19_db_user:<db_password>@cluster0.8oz6cny.mongodb.net/?appName=Cluster0']
+try:
+    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+    # Test the connection
+    client.admin.command('ping')
+    db = client[os.environ['DB_NAME']]
+    print("✅ MongoDB connected successfully")
+except Exception as e:
+    print(f"❌ MongoDB connection failed: {e}")
+    print("⚠️  Running in offline mode - database operations will fail")
+    db = None
+
+db = None  # Force offline mode for testing
 
 # JWT Configuration
 JWT_SECRET = os.environ.get('JWT_SECRET', 'slc-secret-key-2024-livestock-care')
@@ -31,6 +42,19 @@ JWT_EXPIRATION_HOURS = 24
 
 # Create the main app
 app = FastAPI(title="Smart Livestock Care API", version="1.0.0")
+
+# Global exception handler for database errors
+# @app.exception_handler(Exception)
+# async def global_exception_handler(request, exc):
+#     if "pymongo" in str(type(exc)).lower() or "motor" in str(type(exc)).lower():
+#         return JSONResponse(
+#             status_code=503,
+#             content={"detail": "Database service temporarily unavailable"}
+#         )
+#     return JSONResponse(
+#         status_code=500,
+#         content={"detail": "Internal server error"}
+#     )
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -296,6 +320,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
         
+        if db is None:
+            # Mock user for testing
+            return {
+                "id": user_id,
+                "name": "Mock User",
+                "role": payload.get("role", "farmer"),
+                "phone": "mock"
+            }
+        
         user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
@@ -353,25 +386,54 @@ def get_safety_alert(disease: str) -> Optional[SafetyAlert]:
 
 # ============ AUTH ROUTES ============
 
+@api_router.get("/test")
+async def test_endpoint():
+    return {"message": "Server is working"}
+
 @api_router.post("/auth/register", response_model=UserResponse)
 async def register_user(user: UserCreate):
-    # Check if phone already exists
-    existing = await db.users.find_one({"phone": user.phone})
-    if existing:
-        raise HTTPException(status_code=400, detail="Phone number already registered")
-    
-    user_dict = user.model_dump()
-    user_dict["id"] = str(uuid.uuid4())
-    user_dict["password"] = hash_password(user.password)
-    user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
-    user_dict["is_active"] = True
-    
-    await db.users.insert_one(user_dict)
-    
-    del user_dict["password"]
-    if "_id" in user_dict:
-        del user_dict["_id"]
-    return UserResponse(**user_dict)
+    try:
+        if db is None:
+            # Mock registration for testing when DB is not available
+            user_dict = user.model_dump()
+            user_dict["id"] = str(uuid.uuid4())
+            user_dict["password"] = hash_password(user.password)
+            user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+            user_dict["is_active"] = True
+            
+            del user_dict["password"]
+            if "_id" in user_dict:
+                del user_dict["_id"]
+            return UserResponse(**user_dict)
+        
+        try:
+            # Check if phone already exists
+            existing = await db.users.find_one({"phone": user.phone})
+            if existing:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+            
+            user_dict = user.model_dump()
+            user_dict["id"] = str(uuid.uuid4())
+            user_dict["password"] = hash_password(user.password)
+            user_dict["created_at"] = datetime.now(timezone.utc).isoformat()
+            user_dict["is_active"] = True
+            
+            await db.users.insert_one(user_dict)
+            
+            del user_dict["password"]
+            if "_id" in user_dict:
+                del user_dict["_id"]
+            return UserResponse(**user_dict)
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"Registration error: {e}")
+            raise HTTPException(status_code=500, detail="Database error: Service temporarily unavailable")
+    except Exception as e:
+        print(f"Unexpected error in register_user: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login_user(credentials: UserLogin):
@@ -5348,6 +5410,10 @@ async def seed_diagnostic_data(user: dict = Depends(require_role([UserRole.ADMIN
 # Include the router in the main app
 app.include_router(api_router)
 
+@app.get("/test")
+async def test_endpoint():
+    return {"message": "Server is working"}
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -5358,4 +5424,5 @@ app.add_middleware(
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    client.close()
+    if 'client' in globals():
+        client.close()

@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 class SLCAPITester:
-    def __init__(self, base_url="https://livestock-health-2.preview.emergentagent.com"):
+    def __init__(self, base_url="http://localhost:8000"):
         self.base_url = base_url
         self.tokens = {}  # Store tokens for different roles
         self.test_users = {}  # Store created test users
