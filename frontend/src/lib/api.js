@@ -1,15 +1,25 @@
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API_BASE = `${BACKEND_URL}/api`;
 
-// Create axios instance with default config
+// Create axios instance without baseURL; we'll set it at runtime.
 const api = axios.create({
-  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Helper to set API base URL
+export function setApiBase(baseUrl) {
+  if (!baseUrl) return;
+  const url = baseUrl.replace(/\/$/, '');
+  api.defaults.baseURL = `${url}/api`;
+}
+
+// If env var present, set immediately
+if (BACKEND_URL) {
+  setApiBase(BACKEND_URL);
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(

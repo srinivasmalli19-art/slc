@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../lib/api';
+import { authAPI, setApiBase } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -25,15 +25,51 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (phone, password, role) => {
+    // Ensure backend base is detected/selected before calls
+    if (!authAPI._baseURLChecked) {
+      // Candidate backends to probe for a `/test` health endpoint
+      const candidates = [
+        process.env.REACT_APP_BACKEND_URL,
+        'https://api.slcvet.com',
+        'https://slc-1.onrender.com',
+        'http://localhost:8000'
+      ].filter(Boolean);
+
+      for (const c of candidates) {
+        try {
+          const url = c.replace(/\/$/, '') + '/test';
+          const res = await fetch(url, { method: 'GET', mode: 'cors' });
+          if (res.ok) {
+            setApiBase(c);
+            authAPI._baseURLChecked = true;
+            break;
+          }
+        } catch (e) {
+          // ignore and try next
+        }
+      }
+
+      if (!authAPI._baseURLChecked) {
+        // mark checked to avoid repeating
+        authAPI._baseURLChecked = true;
+      }
+    }
     try {
       setError(null);
       const response = await authAPI.login({ phone, password, role });
-      const { access_token, user: userData } = response.data;
-      
+      const { access_token, user: userData } = response.data || {};
+
+      // Defensive: ensure we received a proper user object
+      if (!access_token || !userData || !userData.name) {
+        const msg = response?.data?.detail || 'Invalid login response from server';
+        setError(msg);
+        throw new Error(msg);
+      }
+
       localStorage.setItem('slc_token', access_token);
       localStorage.setItem('slc_user', JSON.stringify(userData));
       setUser(userData);
-      
+
       return userData;
     } catch (err) {
       const message = err.response?.data?.detail || 'Login failed';
