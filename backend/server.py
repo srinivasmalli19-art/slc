@@ -5442,9 +5442,9 @@ app.add_middleware(
 )
 
 
-@app.post("/api/auth/login")
-def login(data: dict):
-    return {"message": "login success"}
+# NOTE: Removed stray placeholder route for `/api/auth/login` which
+# conflicted with the real login handler defined on the API router.
+# The router's `/auth/login` endpoint (TokenResponse) should be used.
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
