@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: slc-backend
+    runtime: python
+    pythonVersion: 3.12
+    
+    # Build configuration
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    
+    # Start command - use gunicorn with uvicorn workers for FastAPI
+    startCommand: gunicorn server:app --worker-class uvicorn.workers.UvicornWorker --workers 2 --worker-connections 1000 --max-requests 1000 --max-requests-jitter 50 --timeout 60 --graceful-timeout 30 --bind 0.0.0.0:10000
+    
+    # Environment variables
+    envVars:
+      - key: MONGO_URL
+        scope: runtime
+      - key: DB_NAME
+        scope: runtime
+        value: slc_db
+      - key: JWT_SECRET
+        scope: runtime
+      - key: CORS_ORIGINS
+        scope: runtime
+        value: https://slcvet.com,https://www.slcvet.com
+      - key: ENVIRONMENT
+        scope: runtime
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12
+    
+    # Health check
+    healthCheckPath: /docs
+    
+    # Resources
+    numInstances: 1
+    plan: standard
