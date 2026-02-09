@@ -1,3 +1,4 @@
+from http import client
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -21,17 +22,17 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['mongodb+srv://srinivasmalli19_db_user:<db_password>@cluster0.8oz6cny.mongodb.net/?appName=Cluster0']
-try:
-    client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
-    # Test the connection
-    client.admin.command('ping')
-    db = client[os.environ['DB_NAME']]
-    print("✅ MongoDB connected successfully")
-except Exception as e:
-    print(f"❌ MongoDB connection failed: {e}")
-    print("⚠️  Running in offline mode - database operations will fail")
-    db = None
+# mongo_url = os.environ.get('MONGO_URL')
+# try:
+#     client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
+#     # Test the connection
+#     client.admin.command('ping')
+#     db = client[os.environ['DB_NAME']]
+#     print("✅ MongoDB connected successfully")
+# except Exception as e:
+#     print(f"❌ MongoDB connection failed: {e}")
+#     print("⚠️  Running in offline mode - database operations will fail")
+#     db = None
 
 db = None  # Force offline mode for testing
 
@@ -437,6 +438,23 @@ async def register_user(user: UserCreate):
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login_user(credentials: UserLogin):
+    # Support offline/mock mode when DB is not available
+    if db is None:
+        # Create a mock user and return a token for testing
+        user_id = str(uuid.uuid4())
+        role_value = credentials.role.value if isinstance(credentials.role, UserRole) else str(credentials.role)
+        token = create_token(user_id, role_value)
+        mock_user = {
+            "id": user_id,
+            "name": "Mock User",
+            "phone": credentials.phone,
+            "email": None,
+            "role": role_value,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True
+        }
+        return TokenResponse(access_token=token, user=UserResponse(**mock_user))
+
     user = await db.users.find_one({"phone": credentials.phone}, {"_id": 0})
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -810,11 +828,11 @@ async def generate_diagnostic_pdf(diagnostic_id: str, user: dict = Depends(requi
 def generate_diagnostic_pdf_content(diagnostic: dict, animal: dict) -> bytes:
     """Generate PDF content for diagnostic report"""
     try:
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib import colors # type: ignore
+        from reportlab.lib.pagesizes import A4 # type: ignore
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # type: ignore
+        from reportlab.lib.units import inch # type: ignore
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle # type: ignore
         
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
@@ -3989,11 +4007,11 @@ async def generate_gva_pdf(
         raise HTTPException(status_code=404, detail="Report not found")
     
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib import colors
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.units import inch
+        from reportlab.lib.pagesizes import A4 # type: ignore
+        from reportlab.lib import colors # type: ignore
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # type: ignore
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # type: ignore
+        from reportlab.lib.units import inch # type: ignore
         
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
@@ -5417,10 +5435,16 @@ async def test_endpoint():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["http://localhost:3000"],
+    # allow_origins=os.environ.get('CORS_ORIGINS', '*').split(',') if os.environ.get('CORS_ORIGINS', '*') != '*' else ['*'],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/api/auth/login")
+def login(data: dict):
+    return {"message": "login success"}
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
