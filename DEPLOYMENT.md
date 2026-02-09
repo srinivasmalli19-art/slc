@@ -1,59 +1,126 @@
-# Render.com Deployment Guide
+# Frontend & Backend Deployment Guide
 
-## Quick Setup
+## Architecture
+- **Backend**: FastAPI on Render.com (Python)
+- **Frontend**: React on Vercel/Netlify (Node.js) — Recommended
+  - Alternative: Deploy frontend to separate Render Web Service
+
+## Backend Deployment (Render.com)
 
 ### Option 1: Using render.yaml (Recommended)
-The `render.yaml` file in the root contains the full deployment configuration. Render will automatically use it when you connect your Git repo.
+The `render.yaml` file contains backend deployment config. Render auto-detects it.
 
 ### Option 2: Manual Configuration
-If not using `render.yaml`, configure in Render dashboard:
+In Render dashboard:
 
 **Build Command:**
-```
+```bash
 pip install --upgrade pip && pip install -r requirements.txt
 ```
 
-**Start Command (FastAPI + Gunicorn):**
-```
-gunicorn server:app --worker-class uvicorn.workers.UvicornWorker --workers 2 --bind 0.0.0.0:10000
-```
-
-## Critical Notes
-
-### For FastAPI, use uvicorn workers:
+**Start Command (FastAPI + Uvicorn):**
 ```bash
-gunicorn server:app --worker-class uvicorn.workers.UvicornWorker
+uvicorn server:app --host 0.0.0.0 --port 10000 --workers 2
 ```
 
-❌ **DO NOT use:**
-```bash
-gunicorn server:app  # This will fail - try to run as WSGI
-```
-
-### Environment Variables Required
-- `MONGO_URL` - MongoDB connection string (e.g., `mongodb+srv://user:pass@cluster.mongodb.net/`)
+### Backend Environment Variables
+Set in Render dashboard → Settings → Environment:
+- `MONGO_URL` - MongoDB Atlas connection string
 - `DB_NAME` - Database name (e.g., `slc_db`)
-- `JWT_SECRET` - Any random string (change in production)
-- `CORS_ORIGINS` - Frontend URLs (e.g., `https://slcvet.com,https://www.slcvet.com`)
+- `JWT_SECRET` - Random secret key (change in production!)
+- `CORS_ORIGINS` - Frontend URLs: `https://slcvet.com,https://www.slcvet.com`
+- `ENVIRONMENT` - Set to `production`
 
-### Update frontend API URL
-In `frontend/.env`, update:
-```env
-REACT_APP_BACKEND_URL=https://your-render-backend-url.onrender.com
+### Backend Service URL
+Render assigns: `https://slc-backend.onrender.com` or custom domain
+
+---
+
+## Frontend Deployment (Vercel - Easiest)
+
+### Quick Setup (Vercel)
+```bash
+npm i -g vercel
+cd frontend
+vercel --prod
 ```
 
-## Backend Service URL Format
-Render assigns URLs like: `https://slc-backend.onrender.com`
+### Environment Variables for Frontend
+Create `frontend/.env.production`:
+```env
+REACT_APP_BACKEND_URL=https://slc-backend.onrender.com
+```
+
+Or set in Vercel dashboard → Settings → Environment Variables
+
+### Frontend URL
+Vercel assigns: `https://slcvet.vercel.app` or connect custom domain `https://slcvet.com`
+
+---
+
+## Alternative: Deploy Frontend to Render
+
+If deploying both to Render, create a **separate Web Service** for frontend:
+
+**Build Command:**
+```bash
+npm install --legacy-peer-deps && npm run build
+```
+
+**Start Command:**
+```bash
+npm start
+```
+
+---
+
+## Update Frontend API URL
+After backend is deployed, update `frontend/.env.production`:
+```env
+REACT_APP_BACKEND_URL=https://your-backend-url.onrender.com
+```
+
+Then rebuild and redeploy frontend.
+
+---
 
 ## Troubleshooting
 
-**Error: `ModuleNotFoundError: No module named 'pkg_resources'`**
-- Solution: Added `setuptools` to requirements.txt ✅
+### Backend: `ModuleNotFoundError: No module named 'pkg_resources'`
+- ✅ Fixed: Added `setuptools` to requirements.txt
 
-**Error: `gunicorn: command not found`**
-- Ensure `gunicorn` is in requirements.txt ✅
-- Ensure build command runs `pip install -r requirements.txt`
+### Backend: `TypeError: FastAPI.__call__() missing 1 required positional argument`
+- ✅ Fixed: Use `uvicorn` (ASGI server), not plain gunicorn (WSGI)
 
-**App crashes with ASGI error**
-- Make sure using `--worker-class uvicorn.workers.UvicornWorker`
-- Check `spawn` method in Python on some platforms
+### Frontend: `npm error code ERESOLVE`
+- ✅ Fixed: Downgraded `react@18.3.1` (compatible with `react-day-picker@8.10.1`)
+
+### CORS Errors on Frontend
+- Ensure `CORS_ORIGINS` in backend includes your frontend domain
+- Restart backend after changing env vars
+
+---
+
+## DNS / Domain Setup (GoDaddy)
+
+For `https://slcvet.com`:
+
+1. **Frontend** (Vercel): Point domain to Vercel nameservers
+   - GoDaddy → Domains → DNS → Update nameservers
+   - Use Vercel's nameservers
+
+2. **Backend** (Render): Use CNAME
+   - Create CNAME: `api.slcvet.com` → `slc-backend.onrender.com`
+   - In Render: Add custom domain `api.slcvet.com`
+
+---
+
+## Deployment Checklist
+
+- [ ] Backend deployed on Render with env vars set
+- [ ] Frontend deployed on Vercel/Netlify
+- [ ] `REACT_APP_BACKEND_URL` points to correct backend URL
+- [ ] `CORS_ORIGINS` includes frontend domain
+- [ ] DNS/domains configured
+- [ ] Test login from frontend → backend works
+- [ ] HTTPS enabled on both (default on Render/Vercel)
