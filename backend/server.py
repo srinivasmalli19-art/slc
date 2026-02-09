@@ -5435,8 +5435,13 @@ async def test_endpoint():
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["http://localhost:3000"],
-    # allow_origins=os.environ.get('CORS_ORIGINS', '*').split(',') if os.environ.get('CORS_ORIGINS', '*') != '*' else ['*'],
+    allow_origins=[
+        "http://localhost:3000",           # Local development
+        "https://slc-1.onrender.com",      # Deployed frontend
+        "https://slc-qls9.onrender.com",   # Local Render testing
+    ],
+    # Uncomment below to use environment variable instead (for dynamic configuration):
+    # allow_origins=os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
