@@ -14,6 +14,26 @@ export function setApiBase(baseUrl) {
   if (!baseUrl) return;
   const url = baseUrl.replace(/\/$/, '');
   api.defaults.baseURL = `${url}/api`;
+  try {
+    localStorage.setItem('slc_backend_url', url);
+  } catch (e) {
+    // ignore
+  }
+}
+
+export function getStoredBackend() {
+  try {
+    return localStorage.getItem('slc_backend_url');
+  } catch (e) {
+    return null;
+  }
+}
+
+export function clearStoredBackend() {
+  try {
+    localStorage.removeItem('slc_backend_url');
+    delete api.defaults.baseURL;
+  } catch (e) {}
 }
 
 // If env var present, set immediately

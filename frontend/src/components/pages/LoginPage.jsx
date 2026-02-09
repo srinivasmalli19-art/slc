@@ -8,6 +8,7 @@ import {
   Phone, Lock, Eye, EyeOff, Loader2
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { setApiBase, getStoredBackend } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,8 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState('farmer');
+  const [backendUrl, setBackendUrl] = useState(() => getStoredBackend() || process.env.REACT_APP_BACKEND_URL || '');
+  const [showBackendInput, setShowBackendInput] = useState(false);
 
   const loginForm = useForm({
     resolver: zodResolver(loginSchema),
@@ -84,6 +87,17 @@ const LoginPage = () => {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const applyBackend = () => {
+    if (!backendUrl) return;
+    try {
+      setApiBase(backendUrl);
+      toast.success('Backend set');
+      setShowBackendInput(false);
+    } catch (e) {
+      toast.error('Invalid backend URL');
     }
   };
 
@@ -151,6 +165,19 @@ const LoginPage = () => {
           </div>
         </div>
       </header>
+
+      {/* Backend selector (for debugging / runtime override) */}
+      <div className="max-w-6xl mx-auto px-4 py-2">
+        <div className="flex items-center justify-end gap-3">
+          <button onClick={() => setShowBackendInput(!showBackendInput)} className="text-sm text-slate-600 underline">Backend</button>
+        </div>
+        {showBackendInput && (
+          <div className="mt-2 flex gap-2 items-center">
+            <input value={backendUrl} onChange={(e) => setBackendUrl(e.target.value)} placeholder="https://your-backend.com" className="border rounded px-3 py-2 w-full" />
+            <button onClick={applyBackend} className="px-3 py-2 bg-green-600 text-white rounded">Apply</button>
+          </div>
+        )}
+      </div>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">

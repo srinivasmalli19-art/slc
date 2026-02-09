@@ -27,31 +27,51 @@ export const AuthProvider = ({ children }) => {
   const login = async (phone, password, role) => {
     // Ensure backend base is detected/selected before calls
     if (!authAPI._baseURLChecked) {
-      // Candidate backends to probe for a `/test` health endpoint
-      const candidates = [
+      // If user previously set a backend URL in localStorage, use it immediately
+      try {
+        const stored = localStorage.getItem('slc_backend_url');
+        if (stored) {
+          setApiBase(stored);
+          authAPI._baseURLChecked = true;
+        }
+      } catch (e) {}
+      // Candidate backends to probe for a `/test` health endpoint.
+      // Avoid probing localhost when the frontend is deployed on a non-localhost origin
+      const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const rawCandidates = [
         process.env.REACT_APP_BACKEND_URL,
-        'https://api.slcvet.com',
         'https://slc-1.onrender.com',
+        'https://api.slcvet.com',
         'http://localhost:8000'
       ].filter(Boolean);
 
+      const candidates = rawCandidates.filter((c) => {
+        if (!isLocalHost && c.startsWith('http://localhost')) return false;
+        return true;
+      });
+
+      let found = false;
       for (const c of candidates) {
         try {
           const url = c.replace(/\/$/, '') + '/test';
           const res = await fetch(url, { method: 'GET', mode: 'cors' });
-          if (res.ok) {
+          if (res && res.ok) {
             setApiBase(c);
             authAPI._baseURLChecked = true;
+            found = true;
+            console.info('[auth] backend autodetect: using', c);
             break;
           }
+          // If we get a non-2xx from a static host (e.g., 404) continue trying
         } catch (e) {
-          // ignore and try next
+          // DNS or network error - continue to next candidate
+          console.debug('[auth] backend autodetect failed for', c, e && e.message);
         }
       }
 
-      if (!authAPI._baseURLChecked) {
-        // mark checked to avoid repeating
+      if (!found) {
         authAPI._baseURLChecked = true;
+        console.warn('[auth] backend autodetect did not find a reachable backend. Set REACT_APP_BACKEND_URL in your frontend environment to avoid probing.');
       }
     }
     try {
